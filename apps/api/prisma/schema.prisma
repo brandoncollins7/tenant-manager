@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// UNIT & ROOMS
+// ============================================
+
+model Unit {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  timezone  String   @default("America/Toronto")
+
+  rooms  Room[]
+  chores ChoreDefinition[]
+
+  @@map("units")
+}
+
+model Room {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  unitId     String
+  roomNumber String
+
+  unit   Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  tenant Tenant?
+
+  @@unique([unitId, roomNumber])
+  @@map("rooms")
+}
+
+// ============================================
+// TENANTS & OCCUPANTS
+// ============================================
+
+model Tenant {
+  id            String    @id @default(uuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  roomId        String    @unique
+  email         String    @unique
+  phone         String?
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean   @default(true)
+  leaseDocument String?
+
+  room          Room           @relation(fields: [roomId], references: [id])
+  occupants     Occupant[]
+  magicLinks    MagicLink[]
+  notifications Notification[]
+
+  @@map("tenants")
+}
+
+model Occupant {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenantId  String
+  name      String
+  choreDay  Int // 0=Sunday, 6=Saturday
+  isActive  Boolean  @default(true)
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  choreCompletions ChoreCompletion[]
+  swapRequestsFrom SwapRequest[]     @relation("SwapRequester")
+  swapRequestsTo   SwapRequest[]     @relation("SwapTarget")
+  tempAssignments  TempAssignment[]
+
+  @@map("occupants")
+}
+
+// ============================================
+// AUTHENTICATION
+// ============================================
+
+model MagicLink {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  token     String    @unique
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  tenantId  String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("magic_links")
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  email     String   @unique
+  name      String
+
+  magicLinks AdminMagicLink[]
+
+  @@map("admins")
+}
+
+model AdminMagicLink {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  token     String    @unique
+  expiresAt DateTime
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  adminId   String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("admin_magic_links")
+}
+
+// ============================================
+// CHORES
+// ============================================
+
+model ChoreDefinition {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  unitId      String
+  name        String
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  unit        Unit              @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  completions ChoreCompletion[]
+
+  @@map("chore_definitions")
+}
+
+model ChoreSchedule {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  weekId    String   @unique // "2025-W48"
+  weekStart DateTime // Monday of this week
+
+  completions  ChoreCompletion[]
+  swapRequests SwapRequest[]
+
+  @@map("chore_schedules")
+}
+
+enum CompletionStatus {
+  PENDING
+  COMPLETED
+  MISSED
+  EXCUSED
+}
+
+model ChoreCompletion {
+  id              String           @id @default(uuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  scheduleId      String
+  occupantId      String
+  choreId         String
+  status          CompletionStatus @default(PENDING)
+  completedAt     DateTime?
+  photoPath       String?
+  photoUploadedAt DateTime?
+  notes           String?
+
+  schedule ChoreSchedule   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  occupant Occupant        @relation(fields: [occupantId], references: [id])
+  chore    ChoreDefinition @relation(fields: [choreId], references: [id])
+
+  @@unique([scheduleId, occupantId, choreId])
+  @@map("chore_completions")
+}
+
+// ============================================
+// SWAP REQUESTS
+// ============================================
+
+enum SwapStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+model SwapRequest {
+  id          String     @id @default(uuid())
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  requesterId String
+  targetId    String
+  scheduleId  String
+  status      SwapStatus @default(PENDING)
+  respondedAt DateTime?
+  reason      String?
+
+  requester Occupant      @relation("SwapRequester", fields: [requesterId], references: [id])
+  target    Occupant      @relation("SwapTarget", fields: [targetId], references: [id])
+  schedule  ChoreSchedule @relation(fields: [scheduleId], references: [id])
+
+  @@map("swap_requests")
+}
+
+model TempAssignment {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  occupantId  String
+  originalDay Int
+  weekId      String
+  reason      String?
+
+  occupant Occupant @relation(fields: [occupantId], references: [id])
+
+  @@unique([occupantId, weekId, originalDay])
+  @@map("temp_assignments")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  CHORE_REMINDER
+  CHORE_DUE_TODAY
+  CHORE_OVERDUE
+  SWAP_REQUEST_RECEIVED
+  SWAP_REQUEST_APPROVED
+  SWAP_REQUEST_REJECTED
+  WELCOME
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  createdAt   DateTime         @default(now())
+  tenantId    String
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  emailSent   Boolean          @default(false)
+  emailSentAt DateTime?
+  metadata    Json?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isRead])
+  @@map("notifications")
+}
