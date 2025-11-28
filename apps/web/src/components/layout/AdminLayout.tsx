@@ -55,23 +55,27 @@ export function AdminLayout() {
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="flex justify-around py-2">
-          {navItems.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex flex-col items-center px-4 py-2 text-xs font-medium transition-colors ${
-                  isActive
-                    ? 'text-primary-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`
-              }
-            >
-              <Icon className="w-6 h-6 mb-1" />
-              {label}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const { to, icon: Icon, label } = item;
+            const end = 'end' in item ? item.end : false;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `flex flex-col items-center px-4 py-2 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'text-primary-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`
+                }
+              >
+                <Icon className="w-6 h-6 mb-1" />
+                {label}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
     </div>

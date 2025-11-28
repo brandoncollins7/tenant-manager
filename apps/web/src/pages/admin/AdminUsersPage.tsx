@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Mail, Shield, Building, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { AddAdminModal } from '../../components/admin/AddAdminModal';
@@ -90,7 +90,8 @@ export function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Admin Users</h1>
           <p className="text-gray-600 mt-1">Manage admin users and permissions</p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)} icon={Plus}>
+        <Button onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="w-5 h-5 mr-2" />
           Add Admin
         </Button>
       </div>
