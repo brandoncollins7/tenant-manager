@@ -43,6 +43,62 @@ export class ChoresService {
     return schedule;
   }
 
+  async getWeeklyScheduleView(unitId: string) {
+    // Get all active occupants in the unit
+    const occupants = await this.prisma.occupant.findMany({
+      where: {
+        isActive: true,
+        tenant: {
+          isActive: true,
+          room: {
+            unitId,
+          },
+        },
+      },
+      include: {
+        tenant: {
+          include: {
+            room: true,
+          },
+        },
+      },
+      orderBy: {
+        choreDay: 'asc',
+      },
+    });
+
+    // Get all active chores for the unit
+    const chores = await this.prisma.choreDefinition.findMany({
+      where: {
+        unitId,
+        isActive: true,
+      },
+      orderBy: {
+        sortOrder: 'asc',
+      },
+    });
+
+    // Group occupants by day
+    const scheduleByDay = Array.from({ length: 7 }, (_, day) => {
+      const dayOccupants = occupants.filter(occ => occ.choreDay === day);
+      return {
+        day,
+        occupants: dayOccupants.map(occ => ({
+          id: occ.id,
+          name: occ.name,
+          roomNumber: occ.tenant.room?.roomNumber || 'N/A',
+          chores: chores.map(chore => ({
+            id: chore.id,
+            name: chore.name,
+            description: chore.description,
+          })),
+        })),
+      };
+    });
+
+    return scheduleByDay;
+  }
+
   async markComplete(completionId: string, dto: CompleteChoreDto) {
     const completion = await this.prisma.choreCompletion.findUnique({
       where: { id: completionId },

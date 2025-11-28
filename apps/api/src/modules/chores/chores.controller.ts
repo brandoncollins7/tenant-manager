@@ -36,6 +36,11 @@ export class ChoresController {
     return this.choresService.getScheduleByWeek(weekId, unitId);
   }
 
+  @Get('schedule-view')
+  getWeeklyScheduleView(@Query('unitId') unitId: string) {
+    return this.choresService.getWeeklyScheduleView(unitId);
+  }
+
   @Get('today')
   getTodaysChores(@CurrentTenant() user: JwtPayload) {
     if (!user.tenantId) {

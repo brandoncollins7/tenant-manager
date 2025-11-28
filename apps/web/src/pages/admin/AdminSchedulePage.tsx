@@ -1,59 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
 import { apiClient } from '../../api/client';
 import { DAYS_OF_WEEK } from '../../types';
 
-interface ChoreCompletion {
+interface Chore {
   id: string;
-  status: 'PENDING' | 'COMPLETED' | 'MISSED' | 'EXCUSED';
-  completedAt?: string;
-  chore: {
-    name: string;
-  };
-  occupant: {
-    name: string;
-    choreDay: number;
-    tenant: {
-      room: {
-        roomNumber: string;
-      };
-    };
-  };
+  name: string;
+  description?: string | null;
 }
 
-interface WeekSchedule {
+interface OccupantSchedule {
   id: string;
-  weekId: string;
-  weekStart: string;
-  completions: ChoreCompletion[];
+  name: string;
+  roomNumber: string;
+  chores: Chore[];
 }
 
-function getWeekId(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  // Get to Monday
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-
-  // Get week number
-  const firstDayOfYear = new Date(d.getFullYear(), 0, 1);
-  const pastDaysOfYear = (d.getTime() - firstDayOfYear.getTime()) / 86400000;
-  const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-
-  return `${d.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
-}
-
-function getWeekStart(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split('T')[0];
+interface DaySchedule {
+  day: number;
+  occupants: OccupantSchedule[];
 }
 
 interface Unit {
@@ -62,10 +28,7 @@ interface Unit {
 }
 
 export function AdminSchedulePage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
-  const weekId = getWeekId(currentDate);
-  const weekStart = getWeekStart(currentDate);
 
   const { data: units } = useQuery<Unit[]>({
     queryKey: ['units'],
@@ -82,49 +45,14 @@ export function AdminSchedulePage() {
     }
   }, [units, selectedUnitId]);
 
-  const { data: schedule, isLoading } = useQuery<WeekSchedule>({
-    queryKey: ['admin', 'schedule', weekId, selectedUnitId],
+  const { data: scheduleByDay, isLoading } = useQuery<DaySchedule[]>({
+    queryKey: ['admin', 'schedule-view', selectedUnitId],
     queryFn: async () => {
-      const response = await apiClient.get(`/chores/schedule/${weekId}?unitId=${selectedUnitId}`);
+      const response = await apiClient.get(`/chores/schedule-view?unitId=${selectedUnitId}`);
       return response.data;
     },
     enabled: !!selectedUnitId,
   });
-
-  const goToPreviousWeek = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 7);
-    setCurrentDate(newDate);
-  };
-
-  const goToNextWeek = () => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 7);
-    setCurrentDate(newDate);
-  };
-
-  const goToCurrentWeek = () => {
-    setCurrentDate(new Date());
-  };
-
-  // Group completions by day
-  const completionsByDay = schedule?.completions.reduce((acc, completion) => {
-    const day = completion.occupant.choreDay;
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(completion);
-    return acc;
-  }, {} as Record<number, ChoreCompletion[]>) ?? {};
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case 'MISSED':
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-yellow-600" />;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -140,7 +68,7 @@ export function AdminSchedulePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
-          <p className="text-gray-600">View and manage chore schedules</p>
+          <p className="text-gray-600">View weekly chore assignments</p>
         </div>
         {units && units.length > 0 && (
           <div className="w-64">
@@ -162,63 +90,48 @@ export function AdminSchedulePage() {
         )}
       </div>
 
-      {/* Week Navigation */}
-      <Card>
-        <CardBody>
-          <div className="flex items-center justify-between">
-            <Button variant="secondary" onClick={goToPreviousWeek}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <div className="text-center">
-              <p className="font-semibold text-gray-900">Week of {weekStart}</p>
-              <button
-                onClick={goToCurrentWeek}
-                className="text-sm text-primary-600 hover:underline"
-              >
-                Go to current week
-              </button>
-            </div>
-            <Button variant="secondary" onClick={goToNextWeek}>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-
       {/* Schedule by Day */}
       <div className="space-y-4">
-        {DAYS_OF_WEEK.map((dayName, dayIndex) => {
-          const dayCompletions = completionsByDay[dayIndex] ?? [];
+        {scheduleByDay?.map((daySchedule) => {
+          const dayName = DAYS_OF_WEEK[daySchedule.day];
 
           return (
-            <Card key={dayIndex}>
+            <Card key={daySchedule.day}>
               <CardHeader>
                 <h3 className="font-semibold text-gray-900">{dayName}</h3>
               </CardHeader>
               <CardBody className="p-0">
-                {dayCompletions.length === 0 ? (
-                  <p className="p-4 text-gray-500 text-sm">No chores scheduled</p>
+                {daySchedule.occupants.length === 0 ? (
+                  <p className="p-4 text-gray-500 text-sm">No occupants assigned</p>
                 ) : (
                   <ul className="divide-y divide-gray-100">
-                    {dayCompletions.map((completion) => (
+                    {daySchedule.occupants.map((occupant) => (
                       <li
-                        key={completion.id}
-                        className="p-4 flex items-center justify-between"
+                        key={occupant.id}
+                        className="p-4"
                       >
-                        <div>
+                        <div className="flex items-center justify-between mb-2">
                           <p className="font-medium text-gray-900">
-                            {completion.occupant.name}
+                            {occupant.name}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            Room {completion.occupant.tenant?.room?.roomNumber ?? 'N/A'} - {completion.chore.name}
+                          <p className="text-sm text-gray-500">
+                            Room {occupant.roomNumber}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(completion.status)}
-                          <span className="text-sm text-gray-600 capitalize">
-                            {completion.status.toLowerCase()}
-                          </span>
-                        </div>
+                        {occupant.chores.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {occupant.chores.map((chore) => (
+                              <span
+                                key={chore.id}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
+                              >
+                                {chore.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">No chores defined</p>
+                        )}
                       </li>
                     ))}
                   </ul>
