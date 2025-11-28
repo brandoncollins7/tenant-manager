@@ -16,7 +16,8 @@
       "Bash(pnpm build:*)",
       "WebFetch(domain:docs.railway.com)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

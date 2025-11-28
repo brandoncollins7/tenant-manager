@@ -1,4 +1,4 @@
-import { Check, Camera, Clock } from 'lucide-react';
+import { Check, Clock } from 'lucide-react';
 import { Card, CardBody } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import type { ChoreCompletion } from '../../types';

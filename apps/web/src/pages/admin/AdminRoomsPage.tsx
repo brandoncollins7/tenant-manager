@@ -41,7 +41,7 @@ export function AdminRoomsPage() {
   const queryClient = useQueryClient();
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
-  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  const [, setSelectedUnitId] = useState<string>('');
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [unitForm, setUnitForm] = useState({ name: '', timezone: 'America/Toronto' });
   const [roomForm, setRoomForm] = useState({ unitId: '', roomNumber: '' });

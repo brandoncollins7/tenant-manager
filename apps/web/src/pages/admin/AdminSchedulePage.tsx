@@ -107,7 +107,7 @@ export function AdminSchedulePage() {
       <Card>
         <CardBody>
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={goToPreviousWeek}>
+            <Button variant="secondary" onClick={goToPreviousWeek}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <div className="text-center">
@@ -119,7 +119,7 @@ export function AdminSchedulePage() {
                 Go to current week
               </button>
             </div>
-            <Button variant="outline" onClick={goToNextWeek}>
+            <Button variant="secondary" onClick={goToNextWeek}>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
