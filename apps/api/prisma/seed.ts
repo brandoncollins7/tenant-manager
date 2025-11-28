@@ -5,6 +5,23 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    // Production: Only create admin user
+    const admin = await prisma.admin.create({
+      data: {
+        email: 'brandoncollins@gmail.com',
+        name: 'Brandon Collins',
+      },
+    });
+
+    console.log(`✅ Created admin: ${admin.email}`);
+    console.log('Production seeding completed!');
+    return;
+  }
+
+  // Development: Create full test dataset
   // Create a unit
   const unit = await prisma.unit.create({
     data: {
