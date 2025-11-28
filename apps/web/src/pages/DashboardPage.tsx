@@ -5,13 +5,24 @@ import { choresApi } from '../api/chores';
 import { useAuth } from '../context/AuthContext';
 import { ChoreCard } from '../components/chores/ChoreCard';
 import { CompletionModal } from '../components/chores/CompletionModal';
+import { WelcomeModal } from '../components/help/WelcomeModal';
 import { Card, CardBody } from '../components/ui/Card';
 import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
+
+const ONBOARDING_KEY = 'rentably_onboarding_completed';
 
 export function DashboardPage() {
   const { user } = useAuth();
   const [selectedCompletion, setSelectedCompletion] =
     useState<ChoreCompletion | null>(null);
+  const [showWelcome, setShowWelcome] = useState(
+    () => !localStorage.getItem(ONBOARDING_KEY)
+  );
+
+  const handleCloseWelcome = () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowWelcome(false);
+  };
 
   const { data: todaysChores, isLoading } = useQuery({
     queryKey: ['todaysChores'],
@@ -136,6 +147,9 @@ export function DashboardPage() {
         completion={selectedCompletion}
         onClose={() => setSelectedCompletion(null)}
       />
+
+      {/* Welcome Modal (first-time onboarding) */}
+      <WelcomeModal isOpen={showWelcome} onClose={handleCloseWelcome} />
     </div>
   );
 }

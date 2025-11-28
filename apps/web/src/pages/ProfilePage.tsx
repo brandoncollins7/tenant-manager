@@ -1,14 +1,26 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { LogOut, User, Calendar, BarChart3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, User, Calendar, BarChart3, HelpCircle, PlayCircle, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { HelpModal } from '../components/help/HelpModal';
 import { DAYS_OF_WEEK } from '../types';
 import { apiClient } from '../api/client';
 
+const ONBOARDING_KEY = 'rentably_onboarding_completed';
+
 export function ProfilePage() {
   const { user, selectedOccupant, selectOccupant, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showHelp, setShowHelp] = useState(false);
+
+  const handleReplayOnboarding = () => {
+    localStorage.removeItem(ONBOARDING_KEY);
+    navigate('/');
+  };
 
   const { data: stats } = useQuery({
     queryKey: ['stats', 'occupant', selectedOccupant?.id],
@@ -145,11 +157,45 @@ export function ProfilePage() {
         </Card>
       )}
 
+      {/* Help & Support */}
+      <Card>
+        <CardBody className="p-0">
+          <button
+            onClick={() => setShowHelp(true)}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 touch-target"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <HelpCircle className="w-5 h-5 text-purple-600" />
+              </div>
+              <span className="font-medium text-gray-900">Help & FAQ</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+          <div className="border-t border-gray-100" />
+          <button
+            onClick={handleReplayOnboarding}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 touch-target"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <PlayCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="font-medium text-gray-900">Watch Intro Again</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </button>
+        </CardBody>
+      </Card>
+
       {/* Logout */}
       <Button variant="secondary" className="w-full" onClick={logout}>
         <LogOut className="w-5 h-5 mr-2" />
         Sign Out
       </Button>
+
+      {/* Help Modal */}
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
