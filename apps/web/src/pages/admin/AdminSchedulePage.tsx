@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { apiClient } from '../../api/client';
@@ -34,22 +34,61 @@ interface WeekSchedule {
 function getWeekId(date: Date): string {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  const dayOfWeek = d.getDay();
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((dayOfWeek + 6) % 7));
-  return monday.toISOString().split('T')[0];
+  // Get to Monday
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+
+  // Get week number
+  const firstDayOfYear = new Date(d.getFullYear(), 0, 1);
+  const pastDaysOfYear = (d.getTime() - firstDayOfYear.getTime()) / 86400000;
+  const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+
+  return `${d.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+}
+
+function getWeekStart(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
+
+interface Unit {
+  id: string;
+  name: string;
 }
 
 export function AdminSchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const weekId = getWeekId(currentDate);
+  const weekStart = getWeekStart(currentDate);
 
-  const { data: schedule, isLoading } = useQuery<WeekSchedule>({
-    queryKey: ['admin', 'schedule', weekId],
+  const { data: units } = useQuery<Unit[]>({
+    queryKey: ['units'],
     queryFn: async () => {
-      const response = await apiClient.get(`/chores/schedule/${weekId}`);
+      const response = await apiClient.get('/units');
       return response.data;
     },
+  });
+
+  // Auto-select first unit when units load
+  useEffect(() => {
+    if (units && units.length > 0 && !selectedUnitId) {
+      setSelectedUnitId(units[0].id);
+    }
+  }, [units, selectedUnitId]);
+
+  const { data: schedule, isLoading } = useQuery<WeekSchedule>({
+    queryKey: ['admin', 'schedule', weekId, selectedUnitId],
+    queryFn: async () => {
+      const response = await apiClient.get(`/chores/schedule/${weekId}?unitId=${selectedUnitId}`);
+      return response.data;
+    },
+    enabled: !!selectedUnitId,
   });
 
   const goToPreviousWeek = () => {
@@ -98,9 +137,29 @@ export function AdminSchedulePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
-        <p className="text-gray-600">View and manage chore schedules</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
+          <p className="text-gray-600">View and manage chore schedules</p>
+        </div>
+        {units && units.length > 0 && (
+          <div className="w-64">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Unit
+            </label>
+            <select
+              value={selectedUnitId}
+              onChange={(e) => setSelectedUnitId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Week Navigation */}
@@ -111,7 +170,7 @@ export function AdminSchedulePage() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <div className="text-center">
-              <p className="font-semibold text-gray-900">Week of {weekId}</p>
+              <p className="font-semibold text-gray-900">Week of {weekStart}</p>
               <button
                 onClick={goToCurrentWeek}
                 className="text-sm text-primary-600 hover:underline"
