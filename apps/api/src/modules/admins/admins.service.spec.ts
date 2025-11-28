@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AdminsService } from './admins.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../notifications/email.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 import { AdminRole } from '../../common/constants/admin-roles';
@@ -9,17 +11,33 @@ import { AdminRole } from '../../common/constants/admin-roles';
 describe('AdminsService', () => {
   let service: AdminsService;
   let prisma: DeepMockProxy<PrismaClient>;
+  let emailService: jest.Mocked<EmailService>;
+  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminsService,
         { provide: PrismaService, useValue: mockDeep<PrismaClient>() },
+        {
+          provide: EmailService,
+          useValue: {
+            sendMagicLink: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('http://localhost:5173'),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AdminsService>(AdminsService);
     prisma = module.get(PrismaService);
+    emailService = module.get(EmailService);
+    configService = module.get(ConfigService);
   });
 
   describe('create', () => {
@@ -40,6 +58,7 @@ describe('AdminsService', () => {
       };
 
       prisma.admin.create.mockResolvedValue(expected as any);
+      prisma.adminMagicLink.create.mockResolvedValue({} as any);
 
       const result = await service.create(dto);
 
@@ -55,6 +74,11 @@ describe('AdminsService', () => {
           unitAssignments: { include: { unit: true } },
         },
       });
+      expect(prisma.adminMagicLink.create).toHaveBeenCalled();
+      expect(emailService.sendMagicLink).toHaveBeenCalledWith(
+        'super@example.com',
+        expect.stringContaining('http://localhost:5173/verify?token='),
+      );
     });
 
     it('should create property manager with unit assignments', async () => {
@@ -78,6 +102,7 @@ describe('AdminsService', () => {
       };
 
       prisma.admin.create.mockResolvedValue(expected as any);
+      prisma.adminMagicLink.create.mockResolvedValue({} as any);
 
       const result = await service.create(dto);
 
@@ -104,7 +129,8 @@ describe('AdminsService', () => {
         role: AdminRole.SUPER_ADMIN,
       };
 
-      prisma.admin.create.mockResolvedValue({} as any);
+      prisma.admin.create.mockResolvedValue({ id: 'uuid' } as any);
+      prisma.adminMagicLink.create.mockResolvedValue({} as any);
 
       await service.create(dto);
 
@@ -125,7 +151,8 @@ describe('AdminsService', () => {
         unitIds: [],
       };
 
-      prisma.admin.create.mockResolvedValue({} as any);
+      prisma.admin.create.mockResolvedValue({ id: 'uuid' } as any);
+      prisma.adminMagicLink.create.mockResolvedValue({} as any);
 
       await service.create(dto);
 

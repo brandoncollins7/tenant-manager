@@ -1,17 +1,27 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailService } from '../notifications/email.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
 import { AdminRole } from '../../common/constants/admin-roles';
 
 @Injectable()
 export class AdminsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+    private configService: ConfigService,
+  ) {}
 
   async create(dto: CreateAdminDto) {
-    return this.prisma.admin.create({
+    const email = dto.email.toLowerCase().trim();
+
+    // Create the admin
+    const admin = await this.prisma.admin.create({
       data: {
-        email: dto.email.toLowerCase().trim(),
+        email,
         name: dto.name,
         role: dto.role,
         unitAssignments: dto.unitIds?.length
@@ -22,6 +32,25 @@ export class AdminsService {
         unitAssignments: { include: { unit: true } },
       },
     });
+
+    // Generate magic link for onboarding
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours for onboarding
+
+    await this.prisma.adminMagicLink.create({
+      data: {
+        token,
+        expiresAt,
+        adminId: admin.id,
+      },
+    });
+
+    // Send onboarding email
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const verifyUrl = `${frontendUrl}/verify?token=${token}`;
+    await this.emailService.sendMagicLink(email, verifyUrl);
+
+    return admin;
   }
 
   async findAll(currentAdminRole: string) {
