@@ -28,7 +28,7 @@ describe('TenantsService', () => {
         roomId: 'room-1',
         primaryOccupantName: 'John Doe',
         choreDay: 1,
-        startDate: new Date('2024-01-01'),
+        startDate: '2024-01-01T00:00:00.000Z',
       };
 
       const mockTenant = {
@@ -49,7 +49,7 @@ describe('TenantsService', () => {
           email: 'test@example.com',
           phone: undefined,
           roomId: 'room-1',
-          startDate: dto.startDate,
+          startDate: new Date(dto.startDate),
           endDate: undefined,
           occupants: {
             create: {
@@ -73,7 +73,7 @@ describe('TenantsService', () => {
         roomId: 'room-1',
         primaryOccupantName: 'John',
         choreDay: 1,
-        startDate: new Date(),
+        startDate: new Date().toISOString(),
       };
 
       prisma.tenant.create.mockResolvedValue({ email: 'upper@case.com' } as any);
@@ -224,6 +224,242 @@ describe('TenantsService', () => {
       prisma.tenant.findUnique.mockResolvedValue(null);
 
       await expect(service.remove('invalid-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('Lease Versioning', () => {
+    describe('uploadLeaseVersion', () => {
+      it('should create version 1 when uploading first lease', async () => {
+        const mockLeaseDoc = {
+          id: 'lease-1',
+          tenantId: 'tenant-1',
+          version: 1,
+          filename: 'lease-file.pdf',
+          uploadedBy: 'admin@test.com',
+          uploadedAt: new Date(),
+          notes: 'Initial lease',
+          isCurrent: true,
+        };
+
+        prisma.$transaction.mockImplementation(async (callback: any) => {
+          return callback({
+            leaseDocument: {
+              updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue(mockLeaseDoc),
+            },
+            tenant: {
+              update: jest.fn().mockResolvedValue({ id: 'tenant-1' }),
+            },
+          } as any);
+        });
+
+        const result = await service.uploadLeaseVersion(
+          'tenant-1',
+          'lease-file.pdf',
+          'admin@test.com',
+          'Initial lease',
+        );
+
+        expect(result.version).toBe(1);
+        expect(result.isCurrent).toBe(true);
+        expect(result.uploadedBy).toBe('admin@test.com');
+        expect(result.notes).toBe('Initial lease');
+      });
+
+      it('should increment version and mark old as not current', async () => {
+        const mockLeaseDoc = {
+          id: 'lease-2',
+          tenantId: 'tenant-1',
+          version: 2,
+          filename: 'v2.pdf',
+          uploadedBy: 'admin@test.com',
+          uploadedAt: new Date(),
+          notes: null,
+          isCurrent: true,
+        };
+
+        prisma.$transaction.mockImplementation(async (callback: any) => {
+          return callback({
+            leaseDocument: {
+              updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+              findFirst: jest.fn().mockResolvedValue({ version: 1 }),
+              create: jest.fn().mockResolvedValue(mockLeaseDoc),
+            },
+            tenant: {
+              update: jest.fn().mockResolvedValue({ id: 'tenant-1' }),
+            },
+          } as any);
+        });
+
+        const result = await service.uploadLeaseVersion('tenant-1', 'v2.pdf', 'admin@test.com');
+
+        expect(result.version).toBe(2);
+        expect(result.isCurrent).toBe(true);
+      });
+
+      it('should update tenant.leaseDocument to point to current version', async () => {
+        const mockLeaseDoc = {
+          id: 'lease-1',
+          tenantId: 'tenant-1',
+          version: 1,
+          filename: 'new-lease.pdf',
+          uploadedBy: 'admin@test.com',
+          uploadedAt: new Date(),
+          notes: null,
+          isCurrent: true,
+        };
+
+        let tenantUpdateCalled = false;
+        let updatedFilename = '';
+
+        prisma.$transaction.mockImplementation(async (callback: any) => {
+          return callback({
+            leaseDocument: {
+              updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue(mockLeaseDoc),
+            },
+            tenant: {
+              update: jest.fn().mockImplementation(({ data }) => {
+                tenantUpdateCalled = true;
+                updatedFilename = data.leaseDocument;
+                return Promise.resolve({ id: 'tenant-1' });
+              }),
+            },
+          } as any);
+        });
+
+        await service.uploadLeaseVersion('tenant-1', 'new-lease.pdf', 'admin@test.com');
+
+        expect(tenantUpdateCalled).toBe(true);
+        expect(updatedFilename).toBe('new-lease.pdf');
+      });
+
+      it('should handle optional notes', async () => {
+        const mockWithNotes = {
+          id: 'lease-1',
+          tenantId: 'tenant-1',
+          version: 1,
+          filename: 'lease.pdf',
+          uploadedBy: 'admin@test.com',
+          uploadedAt: new Date(),
+          notes: 'Rent increase',
+          isCurrent: true,
+        };
+
+        prisma.$transaction.mockImplementation(async (callback: any) => {
+          return callback({
+            leaseDocument: {
+              updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue(mockWithNotes),
+            },
+            tenant: {
+              update: jest.fn().mockResolvedValue({ id: 'tenant-1' }),
+            },
+          } as any);
+        });
+
+        const result = await service.uploadLeaseVersion(
+          'tenant-1',
+          'lease.pdf',
+          'admin@test.com',
+          'Rent increase',
+        );
+
+        expect(result.notes).toBe('Rent increase');
+      });
+    });
+
+    describe('getLeaseHistory', () => {
+      it('should return lease history in descending order', async () => {
+        const mockHistory = [
+          { id: 'lease-3', version: 3, isCurrent: true },
+          { id: 'lease-2', version: 2, isCurrent: false },
+          { id: 'lease-1', version: 1, isCurrent: false },
+        ];
+
+        prisma.leaseDocument.findMany.mockResolvedValue(mockHistory as any);
+
+        const result = await service.getLeaseHistory('tenant-1');
+
+        expect(result).toHaveLength(3);
+        expect(result[0].version).toBe(3);
+        expect(result[2].version).toBe(1);
+        expect(prisma.leaseDocument.findMany).toHaveBeenCalledWith({
+          where: { tenantId: 'tenant-1' },
+          orderBy: { version: 'desc' },
+        });
+      });
+
+      it('should return empty array when no leases exist', async () => {
+        prisma.leaseDocument.findMany.mockResolvedValue([]);
+
+        const result = await service.getLeaseHistory('tenant-1');
+
+        expect(result).toEqual([]);
+      });
+    });
+
+    describe('getLeaseVersion', () => {
+      it('should return specific version by number', async () => {
+        const mockLease = {
+          id: 'lease-2',
+          tenantId: 'tenant-1',
+          version: 2,
+          filename: 'lease-v2.pdf',
+        };
+
+        prisma.leaseDocument.findUnique.mockResolvedValue(mockLease as any);
+
+        const result = await service.getLeaseVersion('tenant-1', 2);
+
+        expect(result).toEqual(mockLease);
+        expect(prisma.leaseDocument.findUnique).toHaveBeenCalledWith({
+          where: {
+            tenantId_version: { tenantId: 'tenant-1', version: 2 },
+          },
+        });
+      });
+
+      it('should return null when version does not exist', async () => {
+        prisma.leaseDocument.findUnique.mockResolvedValue(null);
+
+        const result = await service.getLeaseVersion('tenant-1', 999);
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('getCurrentLease', () => {
+      it('should return the current lease version', async () => {
+        const mockLease = {
+          id: 'lease-3',
+          tenantId: 'tenant-1',
+          version: 3,
+          isCurrent: true,
+          filename: 'current-lease.pdf',
+        };
+
+        prisma.leaseDocument.findFirst.mockResolvedValue(mockLease as any);
+
+        const result = await service.getCurrentLease('tenant-1');
+
+        expect(result).toEqual(mockLease);
+        expect(result?.isCurrent).toBe(true);
+        expect(prisma.leaseDocument.findFirst).toHaveBeenCalledWith({
+          where: { tenantId: 'tenant-1', isCurrent: true },
+        });
+      });
+
+      it('should return null when no current lease exists', async () => {
+        prisma.leaseDocument.findFirst.mockResolvedValue(null);
+
+        const result = await service.getCurrentLease('tenant-1');
+
+        expect(result).toBeNull();
+      });
     });
   });
 });

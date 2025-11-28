@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Building, DoorOpen } from 'lucide-react';
+import { Plus, Trash2, Building, DoorOpen, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { apiClient } from '../../api/client';
+import { extractErrorMessage } from '../../utils/errors';
 
 interface Unit {
   id: string;
@@ -34,10 +37,12 @@ interface Room {
 }
 
 export function AdminRoomsPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [unitForm, setUnitForm] = useState({ name: '', timezone: 'America/Toronto' });
   const [roomForm, setRoomForm] = useState({ unitId: '', roomNumber: '' });
   const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
@@ -58,7 +63,28 @@ export function AdminRoomsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       setIsUnitModalOpen(false);
+      setEditingUnit(null);
       setUnitForm({ name: '', timezone: 'America/Toronto' });
+      toast.success('Unit created successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const updateUnitMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof unitForm }) => {
+      await apiClient.patch(`/units/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      setIsUnitModalOpen(false);
+      setEditingUnit(null);
+      setUnitForm({ name: '', timezone: 'America/Toronto' });
+      toast.success('Unit updated successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 
@@ -69,6 +95,10 @@ export function AdminRoomsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       setUnitToDelete(null);
+      toast.success('Unit deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 
@@ -81,6 +111,10 @@ export function AdminRoomsPage() {
       queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       setIsRoomModalOpen(false);
       setRoomForm({ unitId: '', roomNumber: '' });
+      toast.success('Room created successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 
@@ -92,6 +126,10 @@ export function AdminRoomsPage() {
       queryClient.invalidateQueries({ queryKey: ['units'] });
       queryClient.invalidateQueries({ queryKey: ['available-rooms'] });
       setRoomToDelete(null);
+      toast.success('Room deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
     },
   });
 
@@ -99,6 +137,37 @@ export function AdminRoomsPage() {
     setRoomForm({ unitId, roomNumber: '' });
     setSelectedUnitId(unitId);
     setIsRoomModalOpen(true);
+  };
+
+  const handleOpenEditUnitModal = (unit: Unit) => {
+    setEditingUnit(unit);
+    setUnitForm({ name: unit.name, timezone: unit.timezone });
+    setIsUnitModalOpen(true);
+  };
+
+  const handleSubmitUnit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingUnit) {
+      updateUnitMutation.mutate({ id: editingUnit.id, data: unitForm });
+    } else {
+      createUnitMutation.mutate(unitForm);
+    }
+  };
+
+  const handleSubmitRoom = (e: React.FormEvent) => {
+    e.preventDefault();
+    createRoomMutation.mutate(roomForm);
+  };
+
+  const handleCloseUnitModal = () => {
+    setIsUnitModalOpen(false);
+    setEditingUnit(null);
+    setUnitForm({ name: '', timezone: 'America/Toronto' });
+  };
+
+  const handleCloseRoomModal = () => {
+    setIsRoomModalOpen(false);
+    setRoomForm({ unitId: '', roomNumber: '' });
   };
 
   if (isLoading) {
@@ -138,9 +207,20 @@ export function AdminRoomsPage() {
               <CardHeader className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Building className="w-5 h-5 text-primary-600" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{unit.name}</h3>
-                    <p className="text-sm text-gray-500">{unit.timezone}</p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900">{unit.name}</h3>
+                        <button
+                          onClick={() => handleOpenEditUnitModal(unit)}
+                          className="p-1 text-gray-400 hover:text-primary-600 rounded transition-colors"
+                          title="Edit unit"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500">{unit.timezone}</p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -169,10 +249,11 @@ export function AdminRoomsPage() {
                     {unit.rooms.map((room) => (
                       <div
                         key={room.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-colors cursor-pointer group"
+                        onClick={() => navigate(`/admin/rooms/${room.id}`)}
                       >
                         <div className="flex items-center gap-2">
-                          <DoorOpen className="w-4 h-4 text-gray-500" />
+                          <DoorOpen className="w-4 h-4 text-gray-500 group-hover:text-primary-600" />
                           <div>
                             <span className="font-medium text-gray-900">
                               Room {room.roomNumber}
@@ -186,7 +267,10 @@ export function AdminRoomsPage() {
                         </div>
                         {!room.tenant && (
                           <button
-                            onClick={() => setRoomToDelete(room)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRoomToDelete(room);
+                            }}
                             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded transition-colors"
                             title="Delete room"
                           >
@@ -203,17 +287,14 @@ export function AdminRoomsPage() {
         )}
       </div>
 
-      {/* Add Unit Modal */}
+      {/* Add/Edit Unit Modal */}
       <Modal
         isOpen={isUnitModalOpen}
-        onClose={() => setIsUnitModalOpen(false)}
-        title="Add New Unit"
+        onClose={handleCloseUnitModal}
+        title={editingUnit ? 'Edit Unit' : 'Add New Unit'}
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createUnitMutation.mutate(unitForm);
-          }}
+          onSubmit={handleSubmitUnit}
           className="space-y-4"
         >
           <Input
@@ -245,7 +326,7 @@ export function AdminRoomsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsUnitModalOpen(false)}
+              onClick={handleCloseUnitModal}
               className="flex-1"
             >
               Cancel
@@ -253,31 +334,24 @@ export function AdminRoomsPage() {
             <Button
               type="submit"
               className="flex-1"
-              disabled={createUnitMutation.isPending || !unitForm.name}
+              disabled={(createUnitMutation.isPending || updateUnitMutation.isPending) || !unitForm.name}
             >
-              {createUnitMutation.isPending ? 'Creating...' : 'Create Unit'}
+              {createUnitMutation.isPending || updateUnitMutation.isPending
+                ? (editingUnit ? 'Updating...' : 'Creating...')
+                : (editingUnit ? 'Update Unit' : 'Create Unit')}
             </Button>
           </div>
-
-          {createUnitMutation.isError && (
-            <p className="text-sm text-red-600 text-center">
-              {(createUnitMutation.error as Error)?.message || 'Failed to create unit'}
-            </p>
-          )}
         </form>
       </Modal>
 
       {/* Add Room Modal */}
       <Modal
         isOpen={isRoomModalOpen}
-        onClose={() => setIsRoomModalOpen(false)}
+        onClose={handleCloseRoomModal}
         title="Add New Room"
       >
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createRoomMutation.mutate(roomForm);
-          }}
+          onSubmit={handleSubmitRoom}
           className="space-y-4"
         >
           <Input
@@ -292,7 +366,7 @@ export function AdminRoomsPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setIsRoomModalOpen(false)}
+              onClick={handleCloseRoomModal}
               className="flex-1"
             >
               Cancel
@@ -305,12 +379,6 @@ export function AdminRoomsPage() {
               {createRoomMutation.isPending ? 'Creating...' : 'Create Room'}
             </Button>
           </div>
-
-          {createRoomMutation.isError && (
-            <p className="text-sm text-red-600 text-center">
-              {(createRoomMutation.error as Error)?.message || 'Failed to create room'}
-            </p>
-          )}
         </form>
       </Modal>
 
@@ -347,12 +415,6 @@ export function AdminRoomsPage() {
               {deleteUnitMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
-
-          {deleteUnitMutation.isError && (
-            <p className="text-sm text-red-600 text-center">
-              {(deleteUnitMutation.error as Error)?.message || 'Failed to delete unit'}
-            </p>
-          )}
         </div>
       </Modal>
 
@@ -385,12 +447,6 @@ export function AdminRoomsPage() {
               {deleteRoomMutation.isPending ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
-
-          {deleteRoomMutation.isError && (
-            <p className="text-sm text-red-600 text-center">
-              {(deleteRoomMutation.error as Error)?.message || 'Failed to delete room'}
-            </p>
-          )}
         </div>
       </Modal>
     </div>

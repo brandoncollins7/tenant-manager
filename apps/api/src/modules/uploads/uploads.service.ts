@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sharp from 'sharp';
 import * as crypto from 'crypto';
@@ -6,12 +6,29 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 
 @Injectable()
-export class UploadsService {
+export class UploadsService implements OnModuleInit {
   private readonly logger = new Logger(UploadsService.name);
   private readonly uploadDir: string;
 
   constructor(private configService: ConfigService) {
     this.uploadDir = this.configService.get<string>('UPLOAD_DIR', './uploads');
+  }
+
+  async onModuleInit() {
+    try {
+      // Test write access to upload directory
+      const testFile = path.join(this.uploadDir, '.health-check');
+      await fs.mkdir(this.uploadDir, { recursive: true });
+      await fs.writeFile(testFile, 'OK');
+      await fs.unlink(testFile);
+      this.logger.log(`✅ Upload directory accessible: ${this.uploadDir}`);
+    } catch (error) {
+      this.logger.error(
+        `❌ Upload directory not accessible: ${this.uploadDir}`,
+        error.stack,
+      );
+      throw new Error(`Upload directory ${this.uploadDir} is not writable`);
+    }
   }
 
   async savePhoto(

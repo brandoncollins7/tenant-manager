@@ -26,6 +26,17 @@ export interface Unit {
   timezone: string;
 }
 
+export interface LeaseDocument {
+  id: string;
+  tenantId: string;
+  version: number;
+  filename: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  notes?: string;
+  isCurrent: boolean;
+}
+
 export interface Tenant {
   id: string;
   email: string;
@@ -35,6 +46,8 @@ export interface Tenant {
   isActive: boolean;
   occupants: Occupant[];
   room: Room;
+  leaseDocument?: string;
+  leaseDocuments?: LeaseDocument[];
 }
 
 export interface ChoreDefinition {
@@ -80,6 +93,26 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface Request {
+  id: string;
+  type: 'CLEANING_SUPPLIES' | 'MAINTENANCE_ISSUE';
+  description: string;
+  photoPath?: string;
+  status: 'PENDING' | 'RESOLVED';
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  notes?: string;
+  tenant?: Tenant;
+  unit?: Unit;
+}
+
+export const REQUEST_TYPE_LABELS: Record<string, string> = {
+  CLEANING_SUPPLIES: 'Cleaning Supplies',
+  MAINTENANCE_ISSUE: 'Maintenance Issue',
+};
 
 export interface OccupantStats {
   total: number;

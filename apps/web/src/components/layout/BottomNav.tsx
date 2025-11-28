@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, ClipboardList, ArrowLeftRight, User } from 'lucide-react';
+import { Home, ClipboardList, ArrowLeftRight, MessageSquare, User } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/chores', icon: ClipboardList, label: 'Chores' },
   { to: '/swaps', icon: ArrowLeftRight, label: 'Swaps' },
+  { to: '/requests', icon: MessageSquare, label: 'Requests' },
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 

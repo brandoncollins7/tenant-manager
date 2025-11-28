@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
 import { VerifyMagicLinkDto } from './dto/verify-magic-link.dto';
@@ -24,5 +24,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentTenant() user: JwtPayload) {
     return this.authService.getMe(user.sub, user.isAdmin);
+  }
+
+  @Get('dev/latest-link/:email')
+  async getLatestMagicLink(@Param('email') email: string) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('This endpoint is only available in development');
+    }
+    return this.authService.getLatestMagicLink(email);
   }
 }

@@ -149,6 +149,56 @@ export class ScheduleService {
     return schedule;
   }
 
+  async getOrCreateScheduleForWeek(weekId: string, unitId: string) {
+    let schedule = await this.getScheduleForWeek(weekId);
+
+    if (!schedule) {
+      // Parse weekId to get the Monday of that week
+      const weekStart = this.parseWeekId(weekId);
+
+      const unit = await this.prisma.unit.findUnique({
+        where: { id: unitId },
+        include: {
+          chores: { where: { isActive: true } },
+          rooms: {
+            include: {
+              tenant: {
+                where: { isActive: true },
+                include: {
+                  occupants: { where: { isActive: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (unit) {
+        await this.generateScheduleForUnit(unit, weekId, weekStart);
+        // Fetch the schedule again with all includes
+        schedule = await this.getScheduleForWeek(weekId);
+      }
+    }
+
+    return schedule;
+  }
+
+  // Parse weekId like "2025-W49" and return the Monday of that week
+  parseWeekId(weekId: string): Date {
+    const [year, weekNum] = weekId.split('-W').map(Number);
+    const firstDayOfYear = new Date(year, 0, 1);
+    const daysToMonday = (weekNum - 1) * 7;
+    const targetDate = new Date(firstDayOfYear.getTime() + daysToMonday * 24 * 60 * 60 * 1000);
+
+    // Adjust to Monday
+    const day = targetDate.getDay();
+    const diff = targetDate.getDate() - day + (day === 0 ? -6 : 1);
+    targetDate.setDate(diff);
+    targetDate.setHours(0, 0, 0, 0);
+
+    return targetDate;
+  }
+
   async getScheduleForWeek(weekId: string) {
     return this.prisma.choreSchedule.findUnique({
       where: { weekId },

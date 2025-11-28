@@ -13,8 +13,8 @@ export class TenantsService {
         email: dto.email.toLowerCase().trim(),
         phone: dto.phone,
         roomId: dto.roomId,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
+        startDate: new Date(dto.startDate),
+        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         occupants: {
           create: {
             name: dto.primaryOccupantName,
@@ -74,13 +74,40 @@ export class TenantsService {
   async update(id: string, dto: UpdateTenantDto) {
     await this.findOne(id);
 
+    // Build the data object
+    const updateData: {
+      email?: string;
+      phone?: string;
+      endDate?: Date | null;
+      room?: { disconnect: true } | { connect: { id: string } };
+    } = {};
+
+    if (dto.email !== undefined) {
+      updateData.email = dto.email.toLowerCase().trim();
+    }
+
+    if (dto.phone !== undefined) {
+      updateData.phone = dto.phone;
+    }
+
+    if (dto.endDate !== undefined) {
+      updateData.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    }
+
+    // Handle room assignment/removal
+    if (dto.roomId !== undefined) {
+      if (dto.roomId === null) {
+        // Disconnect from room
+        updateData.room = { disconnect: true };
+      } else {
+        // Connect to a room
+        updateData.room = { connect: { id: dto.roomId } };
+      }
+    }
+
     return this.prisma.tenant.update({
       where: { id },
-      data: {
-        email: dto.email?.toLowerCase().trim(),
-        phone: dto.phone,
-        endDate: dto.endDate,
-      },
+      data: updateData,
       include: {
         occupants: {
           where: { isActive: true },
@@ -116,12 +143,92 @@ export class TenantsService {
     });
   }
 
+  async getUnassignedTenants() {
+    return this.prisma.tenant.findMany({
+      where: {
+        isActive: true,
+        roomId: null,
+      },
+      include: {
+        occupants: {
+          where: { isActive: true },
+        },
+      },
+      orderBy: { email: 'asc' },
+    });
+  }
+
   async updateLeaseDocument(id: string, leaseDocument: string) {
     await this.findOne(id);
 
     return this.prisma.tenant.update({
       where: { id },
       data: { leaseDocument },
+    });
+  }
+
+  async uploadLeaseVersion(
+    tenantId: string,
+    filename: string,
+    uploadedBy: string,
+    notes?: string,
+  ) {
+    // Use transaction to ensure consistency
+    return this.prisma.$transaction(async (tx) => {
+      // Set all existing versions to isCurrent=false
+      await tx.leaseDocument.updateMany({
+        where: { tenantId, isCurrent: true },
+        data: { isCurrent: false },
+      });
+
+      // Get next version number
+      const lastVersion = await tx.leaseDocument.findFirst({
+        where: { tenantId },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      const nextVersion = (lastVersion?.version || 0) + 1;
+
+      // Create new version
+      const leaseDoc = await tx.leaseDocument.create({
+        data: {
+          tenantId,
+          version: nextVersion,
+          filename,
+          uploadedBy,
+          notes,
+          isCurrent: true,
+        },
+      });
+
+      // Update tenant.leaseDocument for backward compatibility
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: { leaseDocument: filename },
+      });
+
+      return leaseDoc;
+    });
+  }
+
+  async getLeaseHistory(tenantId: string) {
+    return this.prisma.leaseDocument.findMany({
+      where: { tenantId },
+      orderBy: { version: 'desc' },
+    });
+  }
+
+  async getLeaseVersion(tenantId: string, version: number) {
+    return this.prisma.leaseDocument.findUnique({
+      where: {
+        tenantId_version: { tenantId, version },
+      },
+    });
+  }
+
+  async getCurrentLease(tenantId: string) {
+    return this.prisma.leaseDocument.findFirst({
+      where: { tenantId, isCurrent: true },
     });
   }
 }

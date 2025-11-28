@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { authApi } from '../api/auth';
+import { identifyUser, trackEvent, EVENTS } from '../utils/analytics';
 import type { User, Occupant } from '../types';
 
 interface AuthContextType {
@@ -38,6 +39,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await authApi.getMe();
       setUser(userData);
 
+      // Identify user for analytics
+      identifyUser(userData.id, {
+        email: userData.email,
+        isAdmin: userData.isAdmin,
+        roomNumber: userData.room?.roomNumber,
+        unitName: userData.room?.unit?.name,
+      });
+
       // Auto-select occupant if only one
       if (userData.occupants?.length === 1) {
         setSelectedOccupant(userData.occupants[0]);
@@ -67,6 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('token', token);
     setUser(userData);
 
+    // Identify user for analytics
+    identifyUser(userData.id, {
+      email: userData.email,
+      isAdmin: userData.isAdmin,
+      roomNumber: userData.room?.roomNumber,
+      unitName: userData.room?.unit?.name,
+    });
+
+    // Track login event
+    trackEvent(EVENTS.USER_LOGGED_IN, {
+      isAdmin: userData.isAdmin,
+    });
+
     // Auto-select occupant if only one
     if (userData.occupants?.length === 1) {
       setSelectedOccupant(userData.occupants[0]);
@@ -75,6 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Track logout event
+    trackEvent(EVENTS.USER_LOGGED_OUT);
+
     localStorage.removeItem('token');
     localStorage.removeItem('selectedOccupantId');
     setUser(null);
@@ -84,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const selectOccupant = useCallback((occupant: Occupant) => {
     setSelectedOccupant(occupant);
     localStorage.setItem('selectedOccupantId', occupant.id);
+
+    // Track occupant switch
+    trackEvent(EVENTS.OCCUPANT_SWITCHED, {
+      occupantId: occupant.id,
+      occupantName: occupant.name,
+      choreDay: occupant.choreDay,
+    });
   }, []);
 
   return (

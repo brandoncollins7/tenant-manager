@@ -29,8 +29,14 @@ export class ChoresService {
     return this.scheduleService.getScheduleForWeek(schedule.weekId);
   }
 
-  async getScheduleByWeek(weekId: string) {
-    const schedule = await this.scheduleService.getScheduleForWeek(weekId);
+  async getScheduleByWeek(weekId: string, unitId?: string) {
+    let schedule = await this.scheduleService.getScheduleForWeek(weekId);
+
+    // If schedule doesn't exist and unitId is provided, try to create it
+    if (!schedule && unitId) {
+      schedule = await this.scheduleService.getOrCreateScheduleForWeek(weekId, unitId);
+    }
+
     if (!schedule) {
       throw new NotFoundException('Schedule not found');
     }
@@ -46,18 +52,16 @@ export class ChoresService {
       throw new NotFoundException('Chore completion record not found');
     }
 
-    if (!dto.photoPath) {
-      throw new BadRequestException('Photo is required to complete a chore');
-    }
-
     return this.prisma.choreCompletion.update({
       where: { id: completionId },
       data: {
         status: 'COMPLETED',
         completedAt: new Date(),
-        photoPath: dto.photoPath,
-        photoUploadedAt: new Date(),
-        notes: dto.notes,
+        ...(dto.photoPath && {
+          photoPath: dto.photoPath,
+          photoUploadedAt: new Date(),
+        }),
+        ...(dto.notes && { notes: dto.notes }),
       },
       include: {
         occupant: true,
@@ -102,7 +106,7 @@ export class ChoresService {
       where: { id: tenantId },
       include: {
         occupants: { where: { isActive: true } },
-        room: true,
+        room: { include: { unit: true } },
       },
     });
 
@@ -111,12 +115,16 @@ export class ChoresService {
     }
 
     const today = new Date().getDay();
-    const occupantWithChoreToday = tenant.occupants.find(
+    const occupantsWithChoreToday = tenant.occupants.filter(
       (o) => o.choreDay === today,
     );
 
-    if (!occupantWithChoreToday) {
-      return { isChoreDay: false, occupant: null, chores: [] };
+    if (occupantsWithChoreToday.length === 0) {
+      return { isChoreDay: false, occupants: [], chores: [] };
+    }
+
+    if (!tenant.room) {
+      return { isChoreDay: true, occupants: occupantsWithChoreToday, chores: [] };
     }
 
     const schedule = await this.scheduleService.getOrCreateCurrentSchedule(
@@ -124,21 +132,29 @@ export class ChoresService {
     );
 
     if (!schedule) {
-      return { isChoreDay: true, occupant: occupantWithChoreToday, chores: [] };
+      return { isChoreDay: true, occupants: occupantsWithChoreToday, chores: [] };
     }
 
     const chores = await this.prisma.choreCompletion.findMany({
       where: {
         scheduleId: schedule.id,
-        occupantId: occupantWithChoreToday.id,
+        occupantId: {
+          in: occupantsWithChoreToday.map((o) => o.id),
+        },
       },
-      include: { chore: true },
-      orderBy: { chore: { sortOrder: 'asc' } },
+      include: {
+        chore: true,
+        occupant: true,
+      },
+      orderBy: [
+        { occupant: { name: 'asc' } },
+        { chore: { sortOrder: 'asc' } },
+      ],
     });
 
     return {
       isChoreDay: true,
-      occupant: occupantWithChoreToday,
+      occupants: occupantsWithChoreToday,
       chores,
     };
   }

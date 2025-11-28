@@ -27,11 +27,12 @@ export function ChoresPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const weekId = getWeekId(currentDate);
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const unitId = user?.room?.unit?.id;
 
   const { data: schedule, isLoading } = useQuery({
-    queryKey: ['schedule', weekId],
-    queryFn: () => choresApi.getScheduleByWeek(weekId),
-    enabled: !!user,
+    queryKey: ['schedule', weekId, unitId],
+    queryFn: () => choresApi.getScheduleByWeek(weekId, unitId),
+    enabled: !!user && !!unitId,
   });
 
   const handlePrevWeek = () => {

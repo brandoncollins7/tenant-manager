@@ -41,6 +41,7 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
     choreDay: 1,
   });
   const [leaseFile, setLeaseFile] = useState<File | null>(null);
+  const [leaseNotes, setLeaseNotes] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
   const { data: availableRooms, isLoading: roomsLoading } = useQuery<Room[]>({
@@ -64,6 +65,9 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
       if (leaseFile) {
         const formData = new FormData();
         formData.append('file', leaseFile);
+        if (leaseNotes) {
+          formData.append('notes', leaseNotes);
+        }
         await apiClient.post(`/tenants/${tenant.id}/lease`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -84,6 +88,7 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
       choreDay: 1,
     });
     setLeaseFile(null);
+    setLeaseNotes('');
     setErrors({});
     onClose();
   };
@@ -247,6 +252,15 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
             </label>
           )}
         </div>
+
+        {leaseFile && (
+          <Input
+            label="Version Notes (optional)"
+            value={leaseNotes}
+            onChange={(e) => setLeaseNotes(e.target.value)}
+            placeholder="e.g., Initial lease agreement"
+          />
+        )}
 
         <div className="flex gap-3 pt-4">
           <Button

@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { PhotoCapture } from './PhotoCapture';
 import { uploadsApi } from '../../api/uploads';
 import { choresApi } from '../../api/chores';
+import { trackEvent, EVENTS } from '../../utils/analytics';
 import type { ChoreCompletion } from '../../types';
 
 interface CompletionModalProps {
@@ -30,10 +31,20 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
       notes,
     }: {
       completionId: string;
-      photoPath: string;
+      photoPath?: string;
       notes?: string;
     }) => choresApi.markComplete(completionId, photoPath, notes),
     onSuccess: () => {
+      // Track successful completion
+      if (completion) {
+        trackEvent(EVENTS.CHORE_COMPLETED, {
+          choreId: completion.chore.id,
+          choreName: completion.chore.name,
+          hasNotes: !!notes,
+          hasPhoto: !!photoFile,
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['chores'] });
       queryClient.invalidateQueries({ queryKey: ['todaysChores'] });
       handleClose();
@@ -41,6 +52,14 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   });
 
   const handlePhotoCapture = (file: File) => {
+    // Track that user started completion
+    if (completion) {
+      trackEvent(EVENTS.CHORE_COMPLETION_STARTED, {
+        choreId: completion.chore.id,
+        choreName: completion.chore.name,
+      });
+    }
+
     setPhotoFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -51,13 +70,19 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   };
 
   const handleSubmit = async () => {
-    if (!completion || !photoFile) return;
+    if (!completion) return;
 
     try {
-      const uploadResult = await uploadMutation.mutateAsync(photoFile);
+      let photoPath: string | undefined;
+
+      if (photoFile) {
+        const uploadResult = await uploadMutation.mutateAsync(photoFile);
+        photoPath = uploadResult.filename;
+      }
+
       await completeMutation.mutateAsync({
         completionId: completion.id,
-        photoPath: uploadResult.filename,
+        photoPath,
         notes: notes || undefined,
       });
     } catch (error) {
@@ -66,6 +91,14 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   };
 
   const handleClose = () => {
+    // Track cancellation if user had started but didn't submit
+    if (photoFile && completion && !completeMutation.isSuccess) {
+      trackEvent(EVENTS.CHORE_COMPLETION_CANCELLED, {
+        choreId: completion.chore.id,
+        choreName: completion.chore.name,
+      });
+    }
+
     setPhotoFile(null);
     setPhotoPreview(null);
     setNotes('');
@@ -94,7 +127,7 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
         {/* Photo Section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Photo Proof *
+            Photo Proof (optional)
           </label>
           {photoPreview ? (
             <div className="relative">
@@ -144,7 +177,7 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
             variant="success"
             className="flex-1"
             onClick={handleSubmit}
-            disabled={!photoFile}
+            disabled={isLoading}
             isLoading={isLoading}
           >
             Mark Complete

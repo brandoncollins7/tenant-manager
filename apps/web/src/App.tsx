@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { usePageTracking } from './hooks/usePageTracking';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -7,11 +8,14 @@ import { VerifyPage } from './pages/VerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ChoresPage } from './pages/ChoresPage';
 import { SwapsPage } from './pages/SwapsPage';
+import { RequestsPage } from './pages/RequestsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
+import { AdminRequestsPage } from './pages/admin/AdminRequestsPage';
 import { AdminSchedulePage } from './pages/admin/AdminSchedulePage';
 import { AdminRoomsPage } from './pages/admin/AdminRoomsPage';
+import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -78,53 +82,65 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Wrapper component for routes content
+function AppRoutes() {
+  usePageTracking(); // Track page views on route changes
+
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route path="/verify" element={<VerifyPage />} />
+
+      {/* Admin routes */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="tenants" element={<AdminTenantsPage />} />
+        <Route path="requests" element={<AdminRequestsPage />} />
+        <Route path="rooms" element={<AdminRoomsPage />} />
+        <Route path="rooms/:roomId" element={<AdminRoomDetailPage />} />
+        <Route path="schedule" element={<AdminSchedulePage />} />
+      </Route>
+
+      {/* Protected tenant routes */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <MobileLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="chores" element={<ChoresPage />} />
+        <Route path="swaps" element={<SwapsPage />} />
+        <Route path="requests" element={<RequestsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* Catch-all redirect */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
-        <Route path="/verify" element={<VerifyPage />} />
-
-        {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="tenants" element={<AdminTenantsPage />} />
-          <Route path="rooms" element={<AdminRoomsPage />} />
-          <Route path="schedule" element={<AdminSchedulePage />} />
-        </Route>
-
-        {/* Protected tenant routes */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <MobileLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardPage />} />
-          <Route path="chores" element={<ChoresPage />} />
-          <Route path="swaps" element={<SwapsPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
-
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

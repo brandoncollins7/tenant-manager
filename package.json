@@ -7,7 +7,8 @@
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "lint": "pnpm -r run lint"
+    "lint": "pnpm -r run lint",
+    "prisma:migrate:dev": "npx prisma migrate dev --name make-tenant-roomid-optional"
   },
   "engines": {
     "node": ">=18.0.0"

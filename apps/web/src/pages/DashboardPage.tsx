@@ -9,7 +9,7 @@ import { Card, CardBody } from '../components/ui/Card';
 import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
 
 export function DashboardPage() {
-  const { user, selectedOccupant } = useAuth();
+  const { user } = useAuth();
   const [selectedCompletion, setSelectedCompletion] =
     useState<ChoreCompletion | null>(null);
 
@@ -27,8 +27,9 @@ export function DashboardPage() {
     );
   }
 
-  const choreDay = selectedOccupant?.choreDay;
-  const dayName = choreDay !== undefined ? DAYS_OF_WEEK[choreDay] : '';
+  const occupantNames = todaysChores?.occupants.map((o) => o.name).join(' & ') || '';
+  const today = new Date().getDay();
+  const todayName = DAYS_OF_WEEK[today];
 
   // Check if all chores are complete
   const allComplete =
@@ -48,10 +49,10 @@ export function DashboardPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                Hi, {selectedOccupant?.name || 'there'}!
+                Hi, {user?.occupants?.[0]?.name || 'there'}!
               </h2>
               <p className="text-gray-600">
-                Your chore day is <strong>{dayName}</strong>
+                Today is <strong>{todayName}</strong>
               </p>
             </div>
           </div>
@@ -102,11 +103,14 @@ export function DashboardPage() {
 
           {/* Chore List */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900">Today's Chores</h3>
+            <h3 className="font-semibold text-gray-900">
+              Today's Chores{occupantNames && ` - ${occupantNames}`}
+            </h3>
             {todaysChores.chores.map((completion) => (
               <ChoreCard
                 key={completion.id}
                 completion={completion}
+                occupantName={completion.occupant.name}
                 onComplete={() => setSelectedCompletion(completion)}
               />
             ))}
@@ -121,7 +125,7 @@ export function DashboardPage() {
               No chores today
             </h3>
             <p className="text-gray-600">
-              Your next chore day is <strong>{dayName}</strong>
+              Enjoy your day off!
             </p>
           </CardBody>
         </Card>

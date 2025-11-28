@@ -3,6 +3,7 @@ import { ArrowLeftRight, Check, X, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { swapsApi } from '../api/swaps';
 import { useAuth } from '../context/AuthContext';
+import { trackEvent, EVENTS } from '../utils/analytics';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -21,14 +22,37 @@ export function SwapsPage() {
   const respondMutation = useMutation({
     mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
       swapsApi.respond(id, approved),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Track approval or rejection
+      trackEvent(
+        variables.approved ? EVENTS.SWAP_APPROVED : EVENTS.SWAP_REJECTED,
+        {
+          swapId: data.id,
+          weekId: data.schedule.weekId,
+          requesterId: data.requester.id,
+          requesterName: data.requester.name,
+          targetId: data.target.id,
+          targetName: data.target.name,
+        }
+      );
+
       queryClient.invalidateQueries({ queryKey: ['swaps'] });
     },
   });
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => swapsApi.cancel(id, selectedOccupant!.id),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Track cancellation
+      trackEvent(EVENTS.SWAP_CANCELLED, {
+        swapId: data.id,
+        weekId: data.schedule.weekId,
+        requesterId: data.requester.id,
+        requesterName: data.requester.name,
+        targetId: data.target.id,
+        targetName: data.target.name,
+      });
+
       queryClient.invalidateQueries({ queryKey: ['swaps'] });
     },
   });

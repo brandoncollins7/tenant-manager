@@ -22,6 +22,10 @@ export class OccupantsService {
       throw new NotFoundException('Tenant not found');
     }
 
+    if (!tenant.room) {
+      throw new BadRequestException('Tenant must be assigned to a room before adding occupants');
+    }
+
     const existingOccupant = await this.prisma.occupant.findFirst({
       where: {
         choreDay: dto.choreDay,
@@ -80,6 +84,10 @@ export class OccupantsService {
 
     // If changing chore day, check availability
     if (dto.choreDay !== undefined && dto.choreDay !== occupant.choreDay) {
+      if (!occupant.tenant.room) {
+        throw new BadRequestException('Cannot change chore day for tenant not assigned to a room');
+      }
+
       const existingOccupant = await this.prisma.occupant.findFirst({
         where: {
           choreDay: dto.choreDay,

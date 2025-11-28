@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { authApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
+import { extractErrorMessage } from '../utils/errors';
 
 export function VerifyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const hasAttemptedVerification = useRef(false);
 
   const token = searchParams.get('token');
 
@@ -18,18 +21,22 @@ export function VerifyPage() {
     mutationFn: authApi.verifyMagicLink,
     onSuccess: (data) => {
       login(data.accessToken, data.user);
+      toast.success('Successfully logged in!');
       navigate('/', { replace: true });
     },
-    onError: () => {
-      setError('This link is invalid or has expired. Please request a new one.');
+    onError: (err) => {
+      const errorMessage = extractErrorMessage(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
     },
   });
 
   useEffect(() => {
-    if (token && !mutation.isPending && !mutation.isSuccess && !error) {
+    if (token && !hasAttemptedVerification.current) {
+      hasAttemptedVerification.current = true;
       mutation.mutate(token);
     }
-  }, [token, mutation, error]);
+  }, [token]);
 
   if (!token) {
     return (

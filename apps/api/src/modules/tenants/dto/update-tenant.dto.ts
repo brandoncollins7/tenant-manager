@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsOptional, IsDateString } from 'class-validator';
+import { IsEmail, IsString, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
 export class UpdateTenantDto {
   @IsEmail()
@@ -9,7 +9,12 @@ export class UpdateTenantDto {
   @IsOptional()
   phone?: string;
 
-  @IsDateString()
+  @IsString()
   @IsOptional()
-  endDate?: Date;
+  endDate?: string;
+
+  @ValidateIf((o) => o.roomId !== null)
+  @IsUUID()
+  @IsOptional()
+  roomId?: string | null;
 }

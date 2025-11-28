@@ -49,6 +49,7 @@ export class StatsService {
     });
 
     const leaderboard = occupants
+      .filter((occupant) => occupant.tenant.room !== null)
       .map((occupant) => {
         const total = occupant.choreCompletions.length;
         const completed = occupant.choreCompletions.filter(
@@ -58,7 +59,7 @@ export class StatsService {
         return {
           id: occupant.id,
           name: occupant.name,
-          roomNumber: occupant.tenant.room.roomNumber,
+          roomNumber: occupant.tenant.room!.roomNumber,
           choreDay: occupant.choreDay,
           total,
           completed,

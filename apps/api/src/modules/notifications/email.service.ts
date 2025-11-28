@@ -154,4 +154,117 @@ export class EmailService {
       this.logger.warn(`[DEV] Swap request email for ${email}: ${subject}`);
     }
   }
+
+  async sendRequestToAdmin(
+    adminEmail: string,
+    tenant: any,
+    request: any,
+  ): Promise<void> {
+    const typeLabel = request.type === 'CLEANING_SUPPLIES' ? 'Cleaning Supplies' : 'Maintenance Issue';
+    const subject = `New Request from Room ${tenant.room.roomNumber}`;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333; font-size: 24px;">New ${typeLabel} Request</h1>
+          <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Room:</strong> ${tenant.room.roomNumber}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Type:</strong> ${typeLabel}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Description:</strong><br>
+              ${request.description}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Contact:</strong> ${tenant.email}${tenant.phone ? ` • ${tenant.phone}` : ''}
+            </p>
+            ${request.photoPath ? '<p style="color: #374151; font-size: 14px; margin: 8px 0;"><strong>Photo attached:</strong> Yes</p>' : ''}
+          </div>
+          <a href="${frontendUrl}/admin/requests" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0;">
+            View in Admin Dashboard
+          </a>
+        </body>
+      </html>
+    `;
+
+    if (this.resend) {
+      try {
+        await this.resend.emails.send({
+          from: this.fromEmail,
+          to: adminEmail,
+          subject,
+          html,
+        });
+        this.logger.log(`Request notification email sent to admin ${adminEmail}`);
+      } catch (error) {
+        this.logger.error(`Failed to send request email to admin ${adminEmail}`, error);
+      }
+    } else {
+      this.logger.warn(`[DEV] Request notification for admin ${adminEmail}: ${subject}`);
+    }
+  }
+
+  async sendRequestResolved(
+    tenantEmail: string,
+    request: any,
+  ): Promise<void> {
+    const typeLabel = request.type === 'CLEANING_SUPPLIES' ? 'Cleaning Supplies' : 'Maintenance Issue';
+    const subject = `Your ${typeLabel} Request Has Been Resolved`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333; font-size: 24px;">Request Resolved</h1>
+          <p style="color: #666; font-size: 16px; line-height: 1.5;">
+            Your ${typeLabel.toLowerCase()} request has been resolved.
+          </p>
+          <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Original Request:</strong><br>
+              ${request.description}
+            </p>
+            ${request.notes ? `
+            <p style="color: #374151; font-size: 14px; margin: 16px 0 8px 0;">
+              <strong>Resolution Notes:</strong><br>
+              ${request.notes}
+            </p>
+            ` : ''}
+          </div>
+          <p style="color: #666; font-size: 16px; line-height: 1.5;">
+            Thank you for your patience!
+          </p>
+        </body>
+      </html>
+    `;
+
+    if (this.resend) {
+      try {
+        await this.resend.emails.send({
+          from: this.fromEmail,
+          to: tenantEmail,
+          subject,
+          html,
+        });
+        this.logger.log(`Request resolved email sent to ${tenantEmail}`);
+      } catch (error) {
+        this.logger.error(`Failed to send resolved email to ${tenantEmail}`, error);
+      }
+    } else {
+      this.logger.warn(`[DEV] Request resolved email for ${tenantEmail}: ${subject}`);
+    }
+  }
 }

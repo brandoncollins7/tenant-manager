@@ -3,7 +3,7 @@ import type { ChoreDefinition, ChoreSchedule, ChoreCompletion } from '../types';
 
 export interface TodaysChores {
   isChoreDay: boolean;
-  occupant: { id: string; name: string; choreDay: number } | null;
+  occupants: { id: string; name: string; choreDay: number }[];
   chores: ChoreCompletion[];
 }
 
@@ -20,8 +20,10 @@ export const choresApi = {
     return response.data;
   },
 
-  getScheduleByWeek: async (weekId: string): Promise<ChoreSchedule> => {
-    const response = await apiClient.get(`/chores/schedule/${weekId}`);
+  getScheduleByWeek: async (weekId: string, unitId?: string): Promise<ChoreSchedule> => {
+    const response = await apiClient.get(`/chores/schedule/${weekId}`, {
+      params: unitId ? { unitId } : undefined,
+    });
     return response.data;
   },
 
@@ -32,7 +34,7 @@ export const choresApi = {
 
   markComplete: async (
     completionId: string,
-    photoPath: string,
+    photoPath?: string,
     notes?: string
   ): Promise<ChoreCompletion> => {
     const response = await apiClient.post(`/chores/${completionId}/complete`, {

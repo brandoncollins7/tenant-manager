@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { trackEvent } from '../utils/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -18,10 +19,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
+// Handle auth errors and track network errors
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Track network errors
+    trackEvent('error:network', {
+      method: error.config?.method?.toUpperCase(),
+      url: error.config?.url,
+      status: error.response?.status,
+      error_code: error.code,
+    });
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';

@@ -120,7 +120,7 @@ export class AuthService {
       id: string;
       email: string;
       occupants: { id: string; name: string; choreDay: number; isActive: boolean }[];
-      room: { id: string; roomNumber: string; unit: { id: string; name: string } };
+      room: { id: string; roomNumber: string; unit: { id: string; name: string } } | null;
     };
   }) {
     if (magicLink.isUsed) {
@@ -244,5 +244,50 @@ export class AuthService {
       occupants: tenant.occupants,
       room: tenant.room,
     };
+  }
+
+  async getLatestMagicLink(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    // Check for admin
+    const admin = await this.prisma.admin.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (admin) {
+      const link = await this.prisma.adminMagicLink.findFirst({
+        where: { adminId: admin.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return {
+        email: normalizedEmail,
+        url: link ? `${frontendUrl}/verify?token=${link.token}` : null,
+        expiresAt: link?.expiresAt,
+        isUsed: link?.isUsed,
+      };
+    }
+
+    // Check for tenant
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (tenant) {
+      const link = await this.prisma.magicLink.findFirst({
+        where: { tenantId: tenant.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return {
+        email: normalizedEmail,
+        url: link ? `${frontendUrl}/verify?token=${link.token}` : null,
+        expiresAt: link?.expiresAt,
+        isUsed: link?.isUsed,
+      };
+    }
+
+    throw new NotFoundException('User not found');
   }
 }

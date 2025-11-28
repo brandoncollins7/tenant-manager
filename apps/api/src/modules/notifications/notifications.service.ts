@@ -133,4 +133,63 @@ export class NotificationsService {
 
     return notification;
   }
+
+  async createRequestReceivedNotification(
+    tenantId: string,
+    requestType: string,
+    requestId: string,
+  ) {
+    const typeLabel = requestType === 'CLEANING_SUPPLIES' ? 'cleaning supplies' : 'maintenance issue';
+    return this.create(
+      tenantId,
+      'REQUEST_RECEIVED',
+      'Request Received',
+      `Your ${typeLabel} request has been received and will be addressed soon.`,
+      { requestType, requestId },
+    );
+  }
+
+  async sendRequestEmailToAdmin(
+    adminEmail: string,
+    tenant: any,
+    request: any,
+  ) {
+    return this.emailService.sendRequestToAdmin(adminEmail, tenant, request);
+  }
+
+  async createRequestResolvedNotification(
+    tenantId: string,
+    requestType: string,
+    notes?: string,
+  ) {
+    const typeLabel = requestType === 'CLEANING_SUPPLIES' ? 'cleaning supplies' : 'maintenance issue';
+    const message = notes
+      ? `Your ${typeLabel} request has been resolved. ${notes}`
+      : `Your ${typeLabel} request has been resolved.`;
+
+    const notification = await this.create(
+      tenantId,
+      'REQUEST_RESOLVED',
+      'Request Resolved',
+      message,
+      { requestType, notes },
+    );
+
+    // Also send email
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: {
+        room: true,
+      },
+    });
+    if (tenant) {
+      await this.emailService.sendRequestResolved(tenant.email, {
+        type: requestType,
+        description: '',
+        notes,
+      });
+    }
+
+    return notification;
+  }
 }

@@ -18,8 +18,10 @@ import { Response } from 'express';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { UploadLeaseDto } from './dto/upload-lease.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UploadsService } from '../uploads/uploads.service';
 
 @Controller('tenants')
@@ -60,6 +62,11 @@ export class TenantsController {
     return this.tenantsService.getAvailableRooms();
   }
 
+  @Get('unassigned')
+  getUnassignedTenants() {
+    return this.tenantsService.getUnassignedTenants();
+  }
+
   @Post(':id/lease')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -78,34 +85,79 @@ export class TenantsController {
   async uploadLease(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UploadLeaseDto,
+    @CurrentUser('email') adminEmail: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
     const filename = await this.uploadsService.saveLease(file, id);
-    await this.tenantsService.updateLeaseDocument(id, filename);
+    const leaseDoc = await this.tenantsService.uploadLeaseVersion(
+      id,
+      filename,
+      adminEmail,
+      dto.notes,
+    );
 
-    return { filename, path: `/api/tenants/${id}/lease` };
+    return {
+      version: leaseDoc.version,
+      filename: leaseDoc.filename,
+      uploadedBy: leaseDoc.uploadedBy,
+      uploadedAt: leaseDoc.uploadedAt,
+      notes: leaseDoc.notes,
+    };
+  }
+
+  @Get(':id/leases')
+  async getLeaseHistory(@Param('id') id: string) {
+    return this.tenantsService.getLeaseHistory(id);
+  }
+
+  @Get(':id/leases/:version')
+  async getLeaseVersion(
+    @Param('id') id: string,
+    @Param('version') version: string,
+    @Res() res: Response,
+  ) {
+    const leaseDoc = await this.tenantsService.getLeaseVersion(
+      id,
+      parseInt(version, 10),
+    );
+
+    if (!leaseDoc) {
+      return res.status(404).json({ message: 'Lease version not found' });
+    }
+
+    try {
+      const buffer = await this.uploadsService.getLease(leaseDoc.filename);
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="lease-v${version}.pdf"`,
+      });
+      res.send(buffer);
+    } catch {
+      res.status(404).json({ message: 'Lease file not found' });
+    }
   }
 
   @Get(':id/lease')
-  async getLease(@Param('id') id: string, @Res() res: Response) {
-    const tenant = await this.tenantsService.findOne(id);
+  async getCurrentLease(@Param('id') id: string, @Res() res: Response) {
+    const leaseDoc = await this.tenantsService.getCurrentLease(id);
 
-    if (!tenant.leaseDocument) {
+    if (!leaseDoc) {
       return res.status(404).json({ message: 'No lease document found' });
     }
 
     try {
-      const buffer = await this.uploadsService.getLease(tenant.leaseDocument);
+      const buffer = await this.uploadsService.getLease(leaseDoc.filename);
       res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="lease-${tenant.room.roomNumber}.pdf"`,
+        'Content-Disposition': `inline; filename="lease-current.pdf"`,
       });
       res.send(buffer);
     } catch {
-      res.status(404).json({ message: 'Lease document not found' });
+      res.status(404).json({ message: 'Lease file not found' });
     }
   }
 }

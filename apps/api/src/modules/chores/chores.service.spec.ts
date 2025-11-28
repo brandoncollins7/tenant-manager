@@ -135,17 +135,96 @@ describe('ChoresService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when photo is missing', async () => {
+    it('should mark a chore as complete without photo', async () => {
       const mockCompletion = {
         id: 'completion-1',
+        scheduleId: 'schedule-1',
+        choreId: 'chore-1',
+        occupantId: 'occupant-1',
         status: 'PENDING',
+        completedAt: null,
+        photoPath: null,
+        photoUploadedAt: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedCompletion = {
+        ...mockCompletion,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        occupant: { id: 'occupant-1', name: 'John' },
+        chore: { id: 'chore-1', name: 'Kitchen' },
       };
 
       prisma.choreCompletion.findUnique.mockResolvedValue(mockCompletion as any);
+      prisma.choreCompletion.update.mockResolvedValue(updatedCompletion as any);
 
-      await expect(
-        service.markComplete('completion-1', { photoPath: undefined as any }),
-      ).rejects.toThrow(BadRequestException);
+      const result = await service.markComplete('completion-1', {});
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.photoPath).toBeNull();
+      expect(result.photoUploadedAt).toBeNull();
+      expect(prisma.choreCompletion.update).toHaveBeenCalledWith({
+        where: { id: 'completion-1' },
+        data: {
+          status: 'COMPLETED',
+          completedAt: expect.any(Date),
+        },
+        include: {
+          occupant: true,
+          chore: true,
+        },
+      });
+    });
+
+    it('should mark a chore as complete with notes only', async () => {
+      const mockCompletion = {
+        id: 'completion-1',
+        scheduleId: 'schedule-1',
+        choreId: 'chore-1',
+        occupantId: 'occupant-1',
+        status: 'PENDING',
+        completedAt: null,
+        photoPath: null,
+        photoUploadedAt: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedCompletion = {
+        ...mockCompletion,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        notes: 'Cleaned thoroughly',
+        occupant: { id: 'occupant-1', name: 'John' },
+        chore: { id: 'chore-1', name: 'Kitchen' },
+      };
+
+      prisma.choreCompletion.findUnique.mockResolvedValue(mockCompletion as any);
+      prisma.choreCompletion.update.mockResolvedValue(updatedCompletion as any);
+
+      const result = await service.markComplete('completion-1', {
+        notes: 'Cleaned thoroughly',
+      });
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.notes).toBe('Cleaned thoroughly');
+      expect(result.photoPath).toBeNull();
+      expect(prisma.choreCompletion.update).toHaveBeenCalledWith({
+        where: { id: 'completion-1' },
+        data: {
+          status: 'COMPLETED',
+          completedAt: expect.any(Date),
+          notes: 'Cleaned thoroughly',
+        },
+        include: {
+          occupant: true,
+          chore: true,
+        },
+      });
     });
   });
 
@@ -224,11 +303,11 @@ describe('ChoresService', () => {
       const mockTenant = {
         id: 'tenant-1',
         occupants: [{ id: 'occupant-1', name: 'John', choreDay: today, isActive: true }],
-        room: { unitId: 'unit-1' },
+        room: { unitId: 'unit-1', unit: {} },
       };
       const mockSchedule = { id: 'schedule-1' };
       const mockChores = [
-        { id: 'completion-1', chore: { name: 'Kitchen' } },
+        { id: 'completion-1', chore: { name: 'Kitchen' }, occupant: { name: 'John' } },
       ];
 
       prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
@@ -238,8 +317,67 @@ describe('ChoresService', () => {
       const result = await service.getTodaysChores('tenant-1');
 
       expect(result.isChoreDay).toBe(true);
-      expect(result.occupant).toEqual(mockTenant.occupants[0]);
+      expect(result.occupants).toEqual(mockTenant.occupants);
       expect(result.chores).toEqual(mockChores);
+      expect(prisma.choreCompletion.findMany).toHaveBeenCalledWith({
+        where: {
+          scheduleId: 'schedule-1',
+          occupantId: {
+            in: ['occupant-1'],
+          },
+        },
+        include: {
+          chore: true,
+          occupant: true,
+        },
+        orderBy: [
+          { occupant: { name: 'asc' } },
+          { chore: { sortOrder: 'asc' } },
+        ],
+      });
+    });
+
+    it('should return chores for multiple occupants on same day', async () => {
+      const today = new Date().getDay();
+      const mockTenant = {
+        id: 'tenant-1',
+        occupants: [
+          { id: 'occupant-1', name: 'John', choreDay: today, isActive: true },
+          { id: 'occupant-2', name: 'Jane', choreDay: today, isActive: true },
+        ],
+        room: { unitId: 'unit-1', unit: {} },
+      };
+      const mockSchedule = { id: 'schedule-1' };
+      const mockChores = [
+        { id: 'completion-1', chore: { name: 'Kitchen' }, occupant: { name: 'Jane' } },
+        { id: 'completion-2', chore: { name: 'Bathroom' }, occupant: { name: 'John' } },
+      ];
+
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+      scheduleService.getOrCreateCurrentSchedule.mockResolvedValue(mockSchedule as any);
+      prisma.choreCompletion.findMany.mockResolvedValue(mockChores as any);
+
+      const result = await service.getTodaysChores('tenant-1');
+
+      expect(result.isChoreDay).toBe(true);
+      expect(result.occupants).toEqual(mockTenant.occupants);
+      expect(result.chores).toEqual(mockChores);
+      expect(prisma.choreCompletion.findMany).toHaveBeenCalledWith({
+        where: {
+          scheduleId: 'schedule-1',
+          occupantId: {
+            in: ['occupant-1', 'occupant-2'],
+          },
+        },
+        include: {
+          chore: true,
+          occupant: true,
+        },
+        orderBy: [
+          { occupant: { name: 'asc' } },
+          { chore: { sortOrder: 'asc' } },
+        ],
+      });
     });
 
     it('should return empty when not chore day', async () => {
@@ -247,7 +385,7 @@ describe('ChoresService', () => {
       const mockTenant = {
         id: 'tenant-1',
         occupants: [{ id: 'occupant-1', name: 'John', choreDay: notToday, isActive: true }],
-        room: { unitId: 'unit-1' },
+        room: { unitId: 'unit-1', unit: {} },
       };
 
       prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
@@ -255,6 +393,7 @@ describe('ChoresService', () => {
       const result = await service.getTodaysChores('tenant-1');
 
       expect(result.isChoreDay).toBe(false);
+      expect(result.occupants).toEqual([]);
       expect(result.chores).toEqual([]);
     });
 

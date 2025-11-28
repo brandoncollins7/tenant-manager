@@ -29,8 +29,11 @@ export class ChoresController {
   }
 
   @Get('schedule/:weekId')
-  getScheduleByWeek(@Param('weekId') weekId: string) {
-    return this.choresService.getScheduleByWeek(weekId);
+  getScheduleByWeek(
+    @Param('weekId') weekId: string,
+    @Query('unitId') unitId?: string,
+  ) {
+    return this.choresService.getScheduleByWeek(weekId, unitId);
   }
 
   @Get('today')

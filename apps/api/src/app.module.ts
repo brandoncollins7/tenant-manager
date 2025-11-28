@@ -12,6 +12,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { StatsModule } from './modules/stats/stats.module';
 import { UnitsModule } from './modules/units/units.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
+import { RequestsModule } from './modules/requests/requests.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { RoomsModule } from './modules/rooms/rooms.module';
     StatsModule,
     UnitsModule,
     RoomsModule,
+    RequestsModule,
   ],
 })
 export class AppModule {}

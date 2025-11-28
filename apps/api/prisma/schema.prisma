@@ -12,14 +12,16 @@ datasource db {
 // ============================================
 
 model Unit {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  name      String
-  timezone  String   @default("America/Toronto")
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  name       String
+  timezone   String   @default("America/Toronto")
+  adminEmail String?
 
-  rooms  Room[]
-  chores ChoreDefinition[]
+  rooms    Room[]
+  chores   ChoreDefinition[]
+  requests Request[]
 
   @@map("units")
 }
@@ -46,7 +48,7 @@ model Tenant {
   id            String    @id @default(uuid())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  roomId        String    @unique
+  roomId        String?   @unique
   email         String    @unique
   phone         String?
   startDate     DateTime
@@ -54,10 +56,12 @@ model Tenant {
   isActive      Boolean   @default(true)
   leaseDocument String?
 
-  room          Room           @relation(fields: [roomId], references: [id])
-  occupants     Occupant[]
-  magicLinks    MagicLink[]
-  notifications Notification[]
+  room           Room?           @relation(fields: [roomId], references: [id])
+  occupants      Occupant[]
+  magicLinks     MagicLink[]
+  notifications  Notification[]
+  requests       Request[]
+  leaseDocuments LeaseDocument[]
 
   @@map("tenants")
 }
@@ -242,6 +246,8 @@ enum NotificationType {
   SWAP_REQUEST_APPROVED
   SWAP_REQUEST_REJECTED
   WELCOME
+  REQUEST_RECEIVED
+  REQUEST_RESOLVED
 }
 
 model Notification {
@@ -261,4 +267,62 @@ model Notification {
 
   @@index([tenantId, isRead])
   @@map("notifications")
+}
+
+// ============================================
+// REQUESTS
+// ============================================
+
+enum RequestType {
+  CLEANING_SUPPLIES
+  MAINTENANCE_ISSUE
+}
+
+enum RequestStatus {
+  PENDING
+  RESOLVED
+}
+
+model Request {
+  id          String        @id @default(uuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tenantId    String
+  unitId      String
+  type        RequestType
+  description String
+  photoPath   String?
+  status      RequestStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  notes       String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit   Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([unitId, status])
+  @@map("requests")
+}
+
+// ============================================
+// LEASE DOCUMENTS
+// ============================================
+
+model LeaseDocument {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  tenantId   String
+  version    Int
+  filename   String
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+  notes      String?
+  isCurrent  Boolean  @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, version])
+  @@index([tenantId, isCurrent])
+  @@map("lease_documents")
 }

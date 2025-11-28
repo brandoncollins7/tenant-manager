@@ -2,7 +2,21 @@
   "permissions": {
     "allow": [
       "Bash(npx prisma migrate:*)",
-      "Bash(pnpm dev)"
+      "Bash(pnpm dev)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(npx prisma db execute:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout 15 pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "WebFetch(domain:docs.railway.com)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

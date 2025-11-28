@@ -5,10 +5,11 @@ import type { ChoreCompletion } from '../../types';
 
 interface ChoreCardProps {
   completion: ChoreCompletion;
+  occupantName?: string;
   onComplete: () => void;
 }
 
-export function ChoreCard({ completion, onComplete }: ChoreCardProps) {
+export function ChoreCard({ completion, occupantName, onComplete }: ChoreCardProps) {
   const { chore, status, completedAt } = completion;
 
   const statusConfig = {
@@ -27,7 +28,14 @@ export function ChoreCard({ completion, onComplete }: ChoreCardProps) {
           <div className="flex items-start gap-3">
             <span className="text-2xl">{chore.icon || '📋'}</span>
             <div>
-              <h3 className="font-semibold text-gray-900">{chore.name}</h3>
+              <h3 className="font-semibold text-gray-900">
+                {chore.name}
+                {occupantName && (
+                  <span className="text-xs text-gray-500 font-normal ml-2">
+                    ({occupantName})
+                  </span>
+                )}
+              </h3>
               {chore.description && (
                 <p className="text-sm text-gray-500 mt-0.5">
                   {chore.description}
@@ -43,8 +51,8 @@ export function ChoreCard({ completion, onComplete }: ChoreCardProps) {
             onClick={onComplete}
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 active:bg-green-800 touch-target"
           >
-            <Camera className="w-5 h-5" />
-            Complete with Photo
+            <Check className="w-5 h-5" />
+            Mark Complete
           </button>
         )}
 
