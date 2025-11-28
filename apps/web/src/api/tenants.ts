@@ -23,11 +23,22 @@ export const tenantsApi = {
     return response.data;
   },
 
-  downloadLeaseVersion: (tenantId: string, version: number) => {
-    return `/api/tenants/${tenantId}/leases/${version}`;
+  getLeaseVersionBlob: async (tenantId: string, version: number): Promise<Blob> => {
+    const response = await apiClient.get(`/tenants/${tenantId}/leases/${version}`, {
+      responseType: 'blob',
+    });
+    return response.data;
   },
 
-  downloadCurrentLease: (tenantId: string) => {
-    return `/api/tenants/${tenantId}/lease`;
+  getCurrentLeaseBlob: async (tenantId: string): Promise<Blob> => {
+    const response = await apiClient.get(`/tenants/${tenantId}/lease`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  sendLoginLink: async (tenantId: string): Promise<{ message: string }> => {
+    const response = await apiClient.post(`/tenants/${tenantId}/send-login-link`);
+    return response.data;
   },
 };

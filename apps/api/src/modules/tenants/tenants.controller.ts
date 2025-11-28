@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UploadsService } from '../uploads/uploads.service';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -30,6 +31,7 @@ export class TenantsController {
   constructor(
     private readonly tenantsService: TenantsService,
     private readonly uploadsService: UploadsService,
+    private readonly authService: AuthService,
   ) {}
 
   @Post()
@@ -55,6 +57,12 @@ export class TenantsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.tenantsService.remove(id);
+  }
+
+  @Post(':id/send-login-link')
+  async sendLoginLink(@Param('id') id: string) {
+    const tenant = await this.tenantsService.findOne(id);
+    return this.authService.requestMagicLink(tenant.email);
   }
 
   @Get('rooms/available')

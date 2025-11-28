@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, Clock, User } from 'lucide-react';
+import { toast } from 'sonner';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { tenantsApi } from '../../api/tenants';
 import { LeaseDocument } from '../../types';
+import { extractErrorMessage } from '../../utils/errors';
 
 interface LeaseHistoryModalProps {
   isOpen: boolean;
@@ -18,6 +21,8 @@ export function LeaseHistoryModal({
   tenantId,
   tenantName,
 }: LeaseHistoryModalProps) {
+  const [downloadingVersion, setDownloadingVersion] = useState<number | null>(null);
+
   const { data: leases, isLoading } = useQuery<LeaseDocument[]>({
     queryKey: ['lease-history', tenantId],
     queryFn: () => tenantsApi.getLeaseHistory(tenantId),
@@ -32,6 +37,19 @@ export function LeaseHistoryModal({
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const handleDownload = async (version: number) => {
+    setDownloadingVersion(version);
+    try {
+      const blob = await tenantsApi.getLeaseVersionBlob(tenantId, version);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      toast.error(extractErrorMessage(error));
+    } finally {
+      setDownloadingVersion(null);
+    }
   };
 
   return (
@@ -87,14 +105,17 @@ export function LeaseHistoryModal({
                     </div>
                   </div>
 
-                  <a
-                    href={tenantsApi.downloadLeaseVersion(tenantId, lease.version)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  <button
+                    onClick={() => handleDownload(lease.version)}
+                    disabled={downloadingVersion === lease.version}
+                    className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    <Download className="w-5 h-5 text-gray-600" />
-                  </a>
+                    {downloadingVersion === lease.version ? (
+                      <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Download className="w-5 h-5 text-gray-600" />
+                    )}
+                  </button>
                 </div>
               </div>
             ))}

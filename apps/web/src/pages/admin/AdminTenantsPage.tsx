@@ -10,6 +10,7 @@ import { AddTenantModal } from '../../components/admin/AddTenantModal';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
 import { apiClient } from '../../api/client';
+import { tenantsApi } from '../../api/tenants';
 import { DAYS_OF_WEEK } from '../../types';
 import { extractErrorMessage } from '../../utils/errors';
 
@@ -227,16 +228,22 @@ export function AdminTenantsPage() {
                         History
                       </button>
                       <span className="text-gray-300">|</span>
-                      <a
-                        href={`/api/tenants/${tenant.id}/lease`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={async () => {
+                          try {
+                            const blob = await tenantsApi.getCurrentLeaseBlob(tenant.id);
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                          } catch (error) {
+                            toast.error(extractErrorMessage(error));
+                          }
+                        }}
                         className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
                         title="View current lease"
                       >
                         <FileText className="w-4 h-4" />
                         View Current
-                      </a>
+                      </button>
                     </>
                   )}
                 </div>

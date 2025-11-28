@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, UserPlus, UserMinus, Pencil, Plus } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, UserPlus, UserMinus, Pencil, Plus, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { apiClient } from '../../api/client';
+import { tenantsApi } from '../../api/tenants';
 import { extractErrorMessage } from '../../utils/errors';
 
 interface Room {
@@ -154,6 +155,18 @@ export function AdminRoomDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['unassigned-tenants'] });
       setShowRemoveTenantModal(false);
       toast.success('Tenant removed successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const sendLoginLinkMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      return tenantsApi.sendLoginLink(tenantId);
+    },
+    onSuccess: () => {
+      toast.success('Login link sent successfully');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -395,14 +408,25 @@ export function AdminRoomDetailPage() {
         <CardHeader className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Tenant Information</h2>
           {room.tenant ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowRemoveTenantModal(true)}
-            >
-              <UserMinus className="w-4 h-4 mr-2" />
-              Remove Tenant
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => sendLoginLinkMutation.mutate(room.tenant!.id)}
+                disabled={sendLoginLinkMutation.isPending}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {sendLoginLinkMutation.isPending ? 'Sending...' : 'Resend Login Email'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowRemoveTenantModal(true)}
+              >
+                <UserMinus className="w-4 h-4 mr-2" />
+                Remove Tenant
+              </Button>
+            </div>
           ) : (
             <Button
               size="sm"
