@@ -37,13 +37,12 @@ export class ScheduleService {
   async generateWeeklySchedules() {
     this.logger.log('Generating weekly schedules...');
 
-    const units = await this.prisma.unit.findMany({
+    let units = await this.prisma.unit.findMany({
       include: {
         chores: { where: { isActive: true } },
         rooms: {
           include: {
             tenant: {
-              where: { isActive: true },
               include: {
                 occupants: { where: { isActive: true } },
               },
@@ -52,6 +51,15 @@ export class ScheduleService {
         },
       },
     });
+
+    // Filter out inactive tenants
+    units = units.map(unit => ({
+      ...unit,
+      rooms: unit.rooms.map(room => ({
+        ...room,
+        tenant: room.tenant?.isActive ? room.tenant : null,
+      })),
+    }));
 
     const nextWeekStart = new Date();
     nextWeekStart.setDate(nextWeekStart.getDate() + 7);
@@ -84,6 +92,10 @@ export class ScheduleService {
       return existing;
     }
 
+    this.logger.log(`Generating schedule for ${weekId}, unit: ${unit.id}`);
+    this.logger.log(`Unit has ${unit.chores.length} chores`);
+    this.logger.log(`Unit has ${unit.rooms.length} rooms`);
+
     // Create schedule
     const schedule = await this.prisma.choreSchedule.create({
       data: {
@@ -97,6 +109,8 @@ export class ScheduleService {
       (room) => room.tenant?.occupants || [],
     );
 
+    this.logger.log(`Found ${occupants.length} occupants for schedule generation`);
+
     // Create completion records for each occupant × chore
     const completionData = occupants.flatMap((occupant) =>
       unit.chores.map((chore) => ({
@@ -105,6 +119,8 @@ export class ScheduleService {
         choreId: chore.id,
       })),
     );
+
+    this.logger.log(`Creating ${completionData.length} completion records`);
 
     if (completionData.length > 0) {
       await this.prisma.choreCompletion.createMany({
@@ -124,14 +140,13 @@ export class ScheduleService {
     });
 
     if (!schedule) {
-      const unit = await this.prisma.unit.findUnique({
+      let unit = await this.prisma.unit.findUnique({
         where: { id: unitId },
         include: {
           chores: { where: { isActive: true } },
           rooms: {
             include: {
               tenant: {
-                where: { isActive: true },
                 include: {
                   occupants: { where: { isActive: true } },
                 },
@@ -141,7 +156,15 @@ export class ScheduleService {
         },
       });
 
+      // Filter out inactive tenants
       if (unit) {
+        unit = {
+          ...unit,
+          rooms: unit.rooms.map(room => ({
+            ...room,
+            tenant: room.tenant?.isActive ? room.tenant : null,
+          })),
+        };
         schedule = await this.generateScheduleForUnit(unit, weekId, weekStart);
       }
     }
@@ -156,14 +179,13 @@ export class ScheduleService {
       // Parse weekId to get the Monday of that week
       const weekStart = this.parseWeekId(weekId);
 
-      const unit = await this.prisma.unit.findUnique({
+      let unit = await this.prisma.unit.findUnique({
         where: { id: unitId },
         include: {
           chores: { where: { isActive: true } },
           rooms: {
             include: {
               tenant: {
-                where: { isActive: true },
                 include: {
                   occupants: { where: { isActive: true } },
                 },
@@ -173,7 +195,15 @@ export class ScheduleService {
         },
       });
 
+      // Filter out inactive tenants
       if (unit) {
+        unit = {
+          ...unit,
+          rooms: unit.rooms.map(room => ({
+            ...room,
+            tenant: room.tenant?.isActive ? room.tenant : null,
+          })),
+        };
         await this.generateScheduleForUnit(unit, weekId, weekStart);
         // Fetch the schedule again with all includes
         schedule = await this.getScheduleForWeek(weekId);
