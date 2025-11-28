@@ -45,10 +45,18 @@ export class AdminsService {
       },
     });
 
-    // Send onboarding email
+    // Send onboarding email with admin details
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const verifyUrl = `${frontendUrl}/verify?token=${token}`;
-    await this.emailService.sendMagicLink(email, verifyUrl);
+    const unitNames = admin.unitAssignments?.map((a) => a.unit.name) || [];
+
+    await this.emailService.sendAdminOnboarding(
+      email,
+      admin.name,
+      admin.role,
+      verifyUrl,
+      unitNames.length > 0 ? unitNames : undefined,
+    );
 
     return admin;
   }

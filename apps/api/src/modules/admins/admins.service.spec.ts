@@ -22,7 +22,7 @@ describe('AdminsService', () => {
         {
           provide: EmailService,
           useValue: {
-            sendMagicLink: jest.fn().mockResolvedValue(undefined),
+            sendAdminOnboarding: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -75,9 +75,12 @@ describe('AdminsService', () => {
         },
       });
       expect(prisma.adminMagicLink.create).toHaveBeenCalled();
-      expect(emailService.sendMagicLink).toHaveBeenCalledWith(
+      expect(emailService.sendAdminOnboarding).toHaveBeenCalledWith(
         'super@example.com',
+        'Super Admin',
+        'SUPER_ADMIN',
         expect.stringContaining('http://localhost:5173/verify?token='),
+        undefined,
       );
     });
 
@@ -120,6 +123,13 @@ describe('AdminsService', () => {
           unitAssignments: { include: { unit: true } },
         },
       });
+      expect(emailService.sendAdminOnboarding).toHaveBeenCalledWith(
+        'manager@example.com',
+        'Property Manager',
+        'PROPERTY_MANAGER',
+        expect.stringContaining('http://localhost:5173/verify?token='),
+        ['Unit 1', 'Unit 2'],
+      );
     });
 
     it('should normalize email (lowercase, trim)', async () => {
