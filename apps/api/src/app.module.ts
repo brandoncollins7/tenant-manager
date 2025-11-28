@@ -16,7 +16,6 @@ import { UnitsModule } from './modules/units/units.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { RequestsModule } from './modules/requests/requests.module';
 import { HealthController } from './health.controller';
-import { SpaController } from './spa.controller';
 
 @Module({
   imports: [
@@ -41,6 +40,6 @@ import { SpaController } from './spa.controller';
     RoomsModule,
     RequestsModule,
   ],
-  controllers: [HealthController, SpaController],
+  controllers: [HealthController],
 })
 export class AppModule {}
