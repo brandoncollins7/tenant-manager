@@ -8,15 +8,17 @@ async function main() {
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
-    // Production: Only create admin user
-    const admin = await prisma.admin.create({
-      data: {
+    // Production: Only create admin user (upsert to avoid duplicates)
+    const admin = await prisma.admin.upsert({
+      where: { email: 'brandoncollins@gmail.com' },
+      update: {},
+      create: {
         email: 'brandoncollins@gmail.com',
         name: 'Brandon Collins',
       },
     });
 
-    console.log(`✅ Created admin: ${admin.email}`);
+    console.log(`✅ Admin user ready: ${admin.email}`);
     console.log('Production seeding completed!');
     return;
   }
