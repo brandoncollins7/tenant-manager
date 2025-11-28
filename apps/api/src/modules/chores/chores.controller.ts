@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -10,6 +12,7 @@ import {
 import { ChoresService } from './chores.service';
 import { CompleteChoreDto } from './dto/complete-chore.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { AdminGuard } from '../../common/guards/admin.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
@@ -60,5 +63,27 @@ export class ChoresController {
     @Query('limit') limit?: number,
   ) {
     return this.choresService.getCompletionHistory(occupantId, limit);
+  }
+
+  // Admin endpoints
+  @Post('definitions')
+  @UseGuards(AdminGuard)
+  createChoreDefinition(@Body() dto: { name: string; description?: string; unitId: string; sortOrder?: number }) {
+    return this.choresService.createChoreDefinition(dto);
+  }
+
+  @Patch('definitions/:id')
+  @UseGuards(AdminGuard)
+  updateChoreDefinition(
+    @Param('id') id: string,
+    @Body() dto: { name?: string; description?: string; sortOrder?: number; isActive?: boolean },
+  ) {
+    return this.choresService.updateChoreDefinition(id, dto);
+  }
+
+  @Delete('definitions/:id')
+  @UseGuards(AdminGuard)
+  deleteChoreDefinition(@Param('id') id: string) {
+    return this.choresService.deleteChoreDefinition(id);
   }
 }

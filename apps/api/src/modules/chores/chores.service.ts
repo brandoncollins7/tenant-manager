@@ -21,6 +21,52 @@ export class ChoresService {
     });
   }
 
+  async createChoreDefinition(data: {
+    name: string;
+    description?: string;
+    unitId: string;
+    sortOrder?: number;
+  }) {
+    const maxSortOrder = await this.prisma.choreDefinition.findFirst({
+      where: { unitId: data.unitId },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+
+    return this.prisma.choreDefinition.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        unitId: data.unitId,
+        sortOrder: data.sortOrder ?? (maxSortOrder?.sortOrder ?? 0) + 1,
+        isActive: true,
+      },
+    });
+  }
+
+  async updateChoreDefinition(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      sortOrder?: number;
+      isActive?: boolean;
+    },
+  ) {
+    return this.prisma.choreDefinition.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deleteChoreDefinition(id: string) {
+    // Soft delete by setting isActive to false
+    return this.prisma.choreDefinition.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
   async getCurrentSchedule(unitId: string) {
     const schedule = await this.scheduleService.getOrCreateCurrentSchedule(unitId);
     if (!schedule) {

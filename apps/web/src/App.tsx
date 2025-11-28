@@ -14,6 +14,7 @@ import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
 import { AdminRequestsPage } from './pages/admin/AdminRequestsPage';
 import { AdminSchedulePage } from './pages/admin/AdminSchedulePage';
+import { AdminChoresPage } from './pages/admin/AdminChoresPage';
 import { AdminRoomsPage } from './pages/admin/AdminRoomsPage';
 import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
 
@@ -113,6 +114,7 @@ function AppRoutes() {
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="rooms" element={<AdminRoomsPage />} />
         <Route path="rooms/:roomId" element={<AdminRoomDetailPage />} />
+        <Route path="chores" element={<AdminChoresPage />} />
         <Route path="schedule" element={<AdminSchedulePage />} />
       </Route>
 
