@@ -1,5 +1,5 @@
 {
-  "name": "@chore-manager/web",
+  "name": "@rentably/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",

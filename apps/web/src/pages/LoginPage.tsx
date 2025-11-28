@@ -57,8 +57,8 @@ export function LoginPage() {
           <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 rounded-2xl flex items-center justify-center">
             <span className="text-3xl">🏠</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Chore Manager</h1>
-          <p className="text-gray-600 mt-1">Sign in to manage your chores</p>
+          <h1 className="text-2xl font-bold text-gray-900">Rentably</h1>
+          <p className="text-gray-600 mt-1">Sign in to manage your rental</p>
         </div>
 
         {/* Form */}

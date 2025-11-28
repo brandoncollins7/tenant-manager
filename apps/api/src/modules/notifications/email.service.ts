@@ -15,11 +15,11 @@ export class EmailService {
     }
     this.fromEmail =
       this.configService.get<string>('EMAIL_FROM') ||
-      'Chore Manager <noreply@example.com>';
+      'Rentably <noreply@rentably.app>';
   }
 
   async sendMagicLink(email: string, verifyUrl: string): Promise<void> {
-    const subject = 'Sign in to Chore Manager';
+    const subject = 'Sign in to Rentably';
     const html = `
       <!DOCTYPE html>
       <html>
@@ -29,7 +29,7 @@ export class EmailService {
           <title>${subject}</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333; font-size: 24px;">Sign in to Chore Manager</h1>
+          <h1 style="color: #333; font-size: 24px;">Sign in to Rentably</h1>
           <p style="color: #666; font-size: 16px; line-height: 1.5;">
             Click the button below to sign in to your account. This link will expire in 15 minutes.
           </p>

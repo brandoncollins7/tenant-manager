@@ -1,8 +1,8 @@
 {
-  "name": "chore-manager",
+  "name": "rentably",
   "version": "1.0.0",
   "private": true,
-  "description": "Tenant chore management webapp",
+  "description": "Rental management made simple",
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",

@@ -14,7 +14,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <Header
-        title="Chore Manager"
+        title="Rentably"
         onNotificationClick={() => setShowNotifications(true)}
       />
 
