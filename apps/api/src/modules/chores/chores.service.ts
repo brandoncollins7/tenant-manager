@@ -88,9 +88,9 @@ export class ChoresService {
     });
 
     const total = completions.length;
-    const completed = completions.filter((c) => c.status === 'COMPLETED').length;
-    const missed = completions.filter((c) => c.status === 'MISSED').length;
-    const pending = completions.filter((c) => c.status === 'PENDING').length;
+    const completed = completions.filter((c: any) => c.status === 'COMPLETED').length;
+    const missed = completions.filter((c: any) => c.status === 'MISSED').length;
+    const pending = completions.filter((c: any) => c.status === 'PENDING').length;
 
     return {
       total,
@@ -116,7 +116,7 @@ export class ChoresService {
 
     const today = new Date().getDay();
     const occupantsWithChoreToday = tenant.occupants.filter(
-      (o) => o.choreDay === today,
+      (o: any) => o.choreDay === today,
     );
 
     if (occupantsWithChoreToday.length === 0) {
@@ -139,7 +139,7 @@ export class ChoresService {
       where: {
         scheduleId: schedule.id,
         occupantId: {
-          in: occupantsWithChoreToday.map((o) => o.id),
+          in: occupantsWithChoreToday.map((o: any) => o.id),
         },
       },
       include: {
