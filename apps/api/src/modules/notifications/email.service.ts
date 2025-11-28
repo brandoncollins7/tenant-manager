@@ -49,15 +49,18 @@ export class EmailService {
 
     if (this.resend) {
       try {
-        await this.resend.emails.send({
+        this.logger.log(`Attempting to send email from: ${this.fromEmail} to: ${email}`);
+        const result = await this.resend.emails.send({
           from: this.fromEmail,
           to: email,
           subject,
           html,
         });
+        this.logger.log(`Resend API response:`, JSON.stringify(result));
         this.logger.log(`Magic link email sent to ${email}`);
       } catch (error) {
         this.logger.error(`Failed to send magic link email to ${email}`, error);
+        this.logger.error(`Error details:`, JSON.stringify(error));
         throw error;
       }
     } else {
