@@ -19,9 +19,10 @@ model Unit {
   timezone   String   @default("America/Toronto")
   adminEmail String?
 
-  rooms    Room[]
-  chores   ChoreDefinition[]
-  requests Request[]
+  rooms            Room[]
+  chores           ChoreDefinition[]
+  requests         Request[]
+  adminAssignments AdminUnitAssignment[]
 
   @@map("units")
 }
@@ -88,6 +89,11 @@ model Occupant {
 // AUTHENTICATION
 // ============================================
 
+enum AdminRole {
+  SUPER_ADMIN
+  PROPERTY_MANAGER
+}
+
 model MagicLink {
   id        String    @id @default(uuid())
   createdAt DateTime  @default(now())
@@ -104,12 +110,14 @@ model MagicLink {
 }
 
 model Admin {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  email     String   @unique
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  email     String    @unique
   name      String
+  role      AdminRole @default(PROPERTY_MANAGER)
 
-  magicLinks AdminMagicLink[]
+  magicLinks      AdminMagicLink[]
+  unitAssignments AdminUnitAssignment[]
 
   @@map("admins")
 }
@@ -127,6 +135,19 @@ model AdminMagicLink {
 
   @@index([token])
   @@map("admin_magic_links")
+}
+
+model AdminUnitAssignment {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  adminId   String
+  unitId    String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  unit  Unit  @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, unitId])
+  @@map("admin_unit_assignments")
 }
 
 // ============================================

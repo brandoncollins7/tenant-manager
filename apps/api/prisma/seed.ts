@@ -11,14 +11,15 @@ async function main() {
     // Production: Only create admin user (upsert to avoid duplicates)
     const admin = await prisma.admin.upsert({
       where: { email: 'brandoncollins@gmail.com' },
-      update: {},
+      update: { role: 'SUPER_ADMIN' },
       create: {
         email: 'brandoncollins@gmail.com',
         name: 'Brandon Collins',
+        role: 'SUPER_ADMIN',
       },
     });
 
-    console.log(`✅ Admin user ready: ${admin.email}`);
+    console.log(`✅ Admin user ready: ${admin.email} (${admin.role})`);
     console.log('Production seeding completed!');
     return;
   }
@@ -77,15 +78,29 @@ async function main() {
 
   console.log(`Created ${rooms.length} rooms`);
 
-  // Create an admin
-  const admin = await prisma.admin.create({
+  // Create admins
+  const superAdmin = await prisma.admin.create({
     data: {
       email: 'admin@example.com',
-      name: 'Property Manager',
+      name: 'Super Admin',
+      role: 'SUPER_ADMIN',
     },
   });
 
-  console.log(`Created admin: ${admin.email}`);
+  console.log(`Created super admin: ${superAdmin.email}`);
+
+  const propertyManager = await prisma.admin.create({
+    data: {
+      email: 'manager@example.com',
+      name: 'Property Manager',
+      role: 'PROPERTY_MANAGER',
+      unitAssignments: {
+        create: [{ unitId: unit.id }],
+      },
+    },
+  });
+
+  console.log(`Created property manager: ${propertyManager.email} (assigned to ${unit.name})`);
 
   // Create sample tenants (one per room)
   const tenants = await Promise.all([

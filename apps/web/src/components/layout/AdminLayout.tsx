@@ -1,8 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Building, FileText, LogOut, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Building, FileText, LogOut, ClipboardList, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const navItems = [
+const baseNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/admin/rooms', icon: Building, label: 'Rooms' },
   { to: '/admin/tenants', icon: Users, label: 'Tenants' },
@@ -11,9 +11,17 @@ const navItems = [
   { to: '/admin/schedule', icon: Calendar, label: 'Schedule' },
 ];
 
+const superAdminNavItems = [
+  { to: '/admin/users', icon: Shield, label: 'Admins', superAdminOnly: true },
+];
+
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const navItems = user?.role === 'SUPER_ADMIN'
+    ? [...baseNavItems, ...superAdminNavItems]
+    : baseNavItems;
 
   const handleLogout = () => {
     logout();

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { AdminRoleType } from '../../common/constants/admin-roles';
 
 export interface JwtPayload {
   sub: string;
@@ -15,6 +16,8 @@ export interface JwtPayload {
   isAdmin: boolean;
   tenantId?: string;
   adminId?: string;
+  adminRole?: AdminRoleType;
+  unitIds?: string[];
 }
 
 @Injectable()
@@ -101,7 +104,15 @@ export class AuthService {
     // Try admin magic link
     const adminMagicLink = await this.prisma.adminMagicLink.findUnique({
       where: { token },
-      include: { admin: true },
+      include: {
+        admin: {
+          include: {
+            unitAssignments: {
+              select: { unitId: true },
+            },
+          },
+        },
+      },
     });
 
     if (adminMagicLink) {
@@ -164,7 +175,13 @@ export class AuthService {
     token: string;
     expiresAt: Date;
     isUsed: boolean;
-    admin: { id: string; email: string; name: string };
+    admin: {
+      id: string;
+      email: string;
+      name: string;
+      role: AdminRoleType;
+      unitAssignments: { unitId: string }[];
+    };
   }) {
     if (magicLink.isUsed) {
       throw new UnauthorizedException('This link has already been used');
@@ -186,6 +203,8 @@ export class AuthService {
       email: magicLink.admin.email,
       isAdmin: true,
       adminId: magicLink.admin.id,
+      adminRole: magicLink.admin.role,
+      unitIds: magicLink.admin.unitAssignments.map((a) => a.unitId),
     };
 
     const accessToken = this.jwtService.sign(payload);
@@ -197,6 +216,8 @@ export class AuthService {
         email: magicLink.admin.email,
         name: magicLink.admin.name,
         isAdmin: true,
+        role: magicLink.admin.role,
+        unitAssignments: magicLink.admin.unitAssignments,
       },
     };
   }
@@ -205,6 +226,11 @@ export class AuthService {
     if (isAdmin) {
       const admin = await this.prisma.admin.findUnique({
         where: { id: userId },
+        include: {
+          unitAssignments: {
+            select: { unitId: true },
+          },
+        },
       });
 
       if (!admin) {
@@ -216,6 +242,8 @@ export class AuthService {
         email: admin.email,
         name: admin.name,
         isAdmin: true,
+        role: admin.role,
+        unitAssignments: admin.unitAssignments,
       };
     }
 

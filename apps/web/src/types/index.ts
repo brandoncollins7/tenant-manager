@@ -1,3 +1,5 @@
+export type AdminRole = 'SUPER_ADMIN' | 'PROPERTY_MANAGER';
+
 export interface User {
   id: string;
   email: string;
@@ -5,6 +7,21 @@ export interface User {
   name?: string;
   occupants?: Occupant[];
   room?: Room;
+  role?: AdminRole;
+  unitAssignments?: { id: string; unitId: string; unit: Unit }[];
+}
+
+export interface Admin {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  createdAt: string;
+  unitAssignments?: {
+    id: string;
+    unitId: string;
+    unit: Unit;
+  }[];
 }
 
 export interface Occupant {

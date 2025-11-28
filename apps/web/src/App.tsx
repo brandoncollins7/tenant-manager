@@ -17,6 +17,7 @@ import { AdminSchedulePage } from './pages/admin/AdminSchedulePage';
 import { AdminChoresPage } from './pages/admin/AdminChoresPage';
 import { AdminRoomsPage } from './pages/admin/AdminRoomsPage';
 import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -116,6 +117,7 @@ function AppRoutes() {
         <Route path="rooms/:roomId" element={<AdminRoomDetailPage />} />
         <Route path="chores" element={<AdminChoresPage />} />
         <Route path="schedule" element={<AdminSchedulePage />} />
+        <Route path="users" element={<AdminUsersPage />} />
       </Route>
 
       {/* Protected tenant routes */}

@@ -5,6 +5,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminsModule } from './modules/admins/admins.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { OccupantsModule } from './modules/occupants/occupants.module';
 import { ChoresModule } from './modules/chores/chores.module';
@@ -29,6 +30,7 @@ import { HealthController } from './health.controller';
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
+    AdminsModule,
     TenantsModule,
     OccupantsModule,
     ChoresModule,
