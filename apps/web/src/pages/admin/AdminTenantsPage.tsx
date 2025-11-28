@@ -109,6 +109,18 @@ export function AdminTenantsPage() {
     },
   });
 
+  const sendLoginLinkMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      return tenantsApi.sendLoginLink(tenantId);
+    },
+    onSuccess: () => {
+      toast.success('Login link sent successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
   const handleEditOccupant = (occupant: Occupant) => {
     setOccupantToEdit(occupant);
     setEditedName(occupant.name);
@@ -195,6 +207,18 @@ export function AdminTenantsPage() {
 
                 {/* Lease Management */}
                 <div className="flex items-center gap-2 border-t border-gray-200 pt-4">
+                  <button
+                    onClick={() => sendLoginLinkMutation.mutate(tenant.id)}
+                    disabled={sendLoginLinkMutation.isPending}
+                    className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 disabled:opacity-50"
+                    title="Send login link email"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Resend Login Email
+                  </button>
+
+                  <span className="text-gray-300">|</span>
+
                   <button
                     onClick={() =>
                       setUploadLeaseModal({
