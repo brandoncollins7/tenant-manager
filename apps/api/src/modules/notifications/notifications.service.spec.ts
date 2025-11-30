@@ -20,6 +20,8 @@ describe('NotificationsService', () => {
           useValue: {
             sendSwapRequest: jest.fn(),
             sendChoreReminder: jest.fn(),
+            sendRequestToAdmin: jest.fn(),
+            sendRequestResolved: jest.fn(),
           },
         },
       ],
@@ -256,6 +258,139 @@ describe('NotificationsService', () => {
         'John',
         '2024-11-26',
       );
+    });
+
+    it('should not send email when tenant not found', async () => {
+      prisma.notification.create.mockResolvedValue({} as any);
+      prisma.tenant.findUnique.mockResolvedValue(null);
+
+      await service.createChoreReminderNotification('tenant-1', 'John', '2024-11-26');
+
+      expect(emailService.sendChoreReminder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createRequestReceivedNotification', () => {
+    it('should create cleaning supplies request notification', async () => {
+      const mockNotification = {
+        id: 'notification-1',
+        type: 'REQUEST_RECEIVED',
+      };
+
+      prisma.notification.create.mockResolvedValue(mockNotification as any);
+
+      const result = await service.createRequestReceivedNotification(
+        'tenant-1',
+        'CLEANING_SUPPLIES',
+        'request-1',
+      );
+
+      expect(result).toEqual(mockNotification);
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tenantId: 'tenant-1',
+          type: 'REQUEST_RECEIVED',
+          title: 'Request Received',
+          message: 'Your cleaning supplies request has been received and will be addressed soon.',
+          metadata: { requestType: 'CLEANING_SUPPLIES', requestId: 'request-1' },
+        }),
+      });
+    });
+
+    it('should create maintenance issue request notification', async () => {
+      prisma.notification.create.mockResolvedValue({} as any);
+
+      await service.createRequestReceivedNotification(
+        'tenant-1',
+        'MAINTENANCE',
+        'request-2',
+      );
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          message: 'Your maintenance issue request has been received and will be addressed soon.',
+        }),
+      });
+    });
+  });
+
+  describe('sendRequestEmailToAdmin', () => {
+    it('should send request email to admin', async () => {
+      const tenant = { id: 'tenant-1', email: 'tenant@example.com' };
+      const request = { id: 'request-1', type: 'MAINTENANCE' };
+
+      await service.sendRequestEmailToAdmin('admin@example.com', tenant, request);
+
+      expect(emailService.sendRequestToAdmin).toHaveBeenCalledWith(
+        'admin@example.com',
+        tenant,
+        request,
+      );
+    });
+  });
+
+  describe('createRequestResolvedNotification', () => {
+    it('should create resolved notification for cleaning supplies', async () => {
+      const mockTenant = {
+        id: 'tenant-1',
+        email: 'tenant@example.com',
+        room: { roomNumber: '101' },
+      };
+      const mockNotification = {
+        id: 'notification-1',
+        type: 'REQUEST_RESOLVED',
+      };
+
+      prisma.notification.create.mockResolvedValue(mockNotification as any);
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+
+      const result = await service.createRequestResolvedNotification(
+        'tenant-1',
+        'CLEANING_SUPPLIES',
+      );
+
+      expect(result).toEqual(mockNotification);
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          message: 'Your cleaning supplies request has been resolved.',
+        }),
+      });
+      expect(emailService.sendRequestResolved).toHaveBeenCalledWith(
+        'tenant@example.com',
+        { type: 'CLEANING_SUPPLIES', description: '', notes: undefined },
+      );
+    });
+
+    it('should create resolved notification with notes', async () => {
+      const mockTenant = {
+        id: 'tenant-1',
+        email: 'tenant@example.com',
+        room: { roomNumber: '101' },
+      };
+
+      prisma.notification.create.mockResolvedValue({} as any);
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+
+      await service.createRequestResolvedNotification(
+        'tenant-1',
+        'MAINTENANCE',
+        'Fixed the faucet',
+      );
+
+      expect(prisma.notification.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          message: 'Your maintenance issue request has been resolved. Fixed the faucet',
+        }),
+      });
+    });
+
+    it('should not send email when tenant not found', async () => {
+      prisma.notification.create.mockResolvedValue({} as any);
+      prisma.tenant.findUnique.mockResolvedValue(null);
+
+      await service.createRequestResolvedNotification('tenant-1', 'MAINTENANCE');
+
+      expect(emailService.sendRequestResolved).not.toHaveBeenCalled();
     });
   });
 });

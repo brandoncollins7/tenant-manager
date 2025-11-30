@@ -18,6 +18,7 @@ jest.mock('fs/promises', () => ({
   mkdir: jest.fn().mockResolvedValue(undefined),
   readFile: jest.fn().mockResolvedValue(Buffer.from('test-image')),
   unlink: jest.fn().mockResolvedValue(undefined),
+  writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('UploadsService', () => {
@@ -101,6 +102,73 @@ describe('UploadsService', () => {
 
       // Should not throw
       await expect(service.deletePhoto('tenant-1/nonexistent.jpg')).resolves.not.toThrow();
+    });
+  });
+
+  describe('onModuleInit', () => {
+    it('should verify upload directory is accessible', async () => {
+      await service.onModuleInit();
+
+      expect(fs.mkdir).toHaveBeenCalledWith('./test-uploads', { recursive: true });
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining('.health-check'),
+        'OK',
+      );
+      expect(fs.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('.health-check'),
+      );
+    });
+
+    it('should throw error when upload directory is not writable', async () => {
+      (fs.writeFile as jest.Mock).mockRejectedValueOnce(new Error('Permission denied'));
+
+      await expect(service.onModuleInit()).rejects.toThrow(
+        'Upload directory ./test-uploads is not writable',
+      );
+    });
+  });
+
+  describe('saveLease', () => {
+    it('should save a lease PDF file', async () => {
+      const mockFile = {
+        buffer: Buffer.from('pdf-content'),
+        originalname: 'lease.pdf',
+        mimetype: 'application/pdf',
+      } as Express.Multer.File;
+
+      const result = await service.saveLease(mockFile, 'tenant-1');
+
+      expect(result).toMatch(/^tenant-1\/leases\/\d+-[a-f0-9]+\.pdf$/);
+      expect(fs.mkdir).toHaveBeenCalledWith(
+        expect.stringContaining('tenant-1/leases'),
+        { recursive: true },
+      );
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining('.pdf'),
+        mockFile.buffer,
+      );
+    });
+
+    it('should create unique lease filenames', async () => {
+      const mockFile = {
+        buffer: Buffer.from('pdf-content'),
+      } as Express.Multer.File;
+
+      const result1 = await service.saveLease(mockFile, 'tenant-1');
+      const result2 = await service.saveLease(mockFile, 'tenant-1');
+
+      expect(result1).not.toBe(result2);
+    });
+  });
+
+  describe('getLease', () => {
+    it('should read a lease file', async () => {
+      const result = await service.getLease('tenant-1/leases/lease.pdf');
+
+      expect(result).toEqual(Buffer.from('test-image'));
+      expect(fs.readFile).toHaveBeenCalledWith(
+        path.join('./test-uploads', 'tenant-1/leases/lease.pdf'),
+      );
     });
   });
 });

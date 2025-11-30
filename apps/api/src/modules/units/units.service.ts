@@ -20,8 +20,14 @@ export class UnitsService {
     });
   }
 
-  async findAll() {
+  async findAll(adminRole?: string, unitIds?: string[]) {
+    const where =
+      adminRole === 'PROPERTY_MANAGER' && unitIds?.length
+        ? { id: { in: unitIds } }
+        : {};
+
     return this.prisma.unit.findMany({
+      where,
       include: {
         rooms: {
           include: {

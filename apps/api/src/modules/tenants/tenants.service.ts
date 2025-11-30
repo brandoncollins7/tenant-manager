@@ -31,14 +31,17 @@ export class TenantsService {
     });
   }
 
-  async findAll(unitId?: string) {
+  async findAll(unitId?: string, adminRole?: string, adminUnitIds?: string[]) {
+    let where: any = { isActive: true };
+
+    if (unitId) {
+      where.room = { unitId };
+    } else if (adminRole === 'PROPERTY_MANAGER' && adminUnitIds?.length) {
+      where.room = { unitId: { in: adminUnitIds } };
+    }
+
     return this.prisma.tenant.findMany({
-      where: unitId
-        ? {
-            room: { unitId },
-            isActive: true,
-          }
-        : { isActive: true },
+      where,
       include: {
         occupants: {
           where: { isActive: true },

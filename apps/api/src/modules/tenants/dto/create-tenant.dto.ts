@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsISO8601,
 } from 'class-validator';
 
 export class CreateTenantDto {
@@ -21,11 +22,11 @@ export class CreateTenantDto {
   @IsOptional()
   roomId?: string;
 
-  @IsString()
+  @IsISO8601()
   @IsNotEmpty()
   startDate: string;
 
-  @IsString()
+  @IsISO8601()
   @IsOptional()
   endDate?: string;
 

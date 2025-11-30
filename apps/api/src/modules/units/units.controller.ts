@@ -13,6 +13,8 @@ import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtPayload } from '../auth/auth.service';
 
 @Controller('units')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -25,8 +27,8 @@ export class UnitsController {
   }
 
   @Get()
-  findAll() {
-    return this.unitsService.findAll();
+  findAll(@CurrentUser() user: JwtPayload) {
+    return this.unitsService.findAll(user.adminRole, user.unitIds);
   }
 
   @Get(':id')

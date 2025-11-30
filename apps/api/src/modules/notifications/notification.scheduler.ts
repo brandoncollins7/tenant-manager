@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
+import { EmailService } from './email.service';
 
 @Injectable()
 export class NotificationScheduler {
@@ -10,6 +11,7 @@ export class NotificationScheduler {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private emailService: EmailService,
   ) {}
 
   @Cron('0 9 * * *') // Every day at 9 AM
@@ -89,5 +91,69 @@ export class NotificationScheduler {
     });
 
     this.logger.log(`Marked ${result.count} chores as missed`);
+  }
+
+  @Cron('30 23 * * *') // Every day at 11:30 PM (after missed chores are marked)
+  async sendDailyAdminReports() {
+    this.logger.log('Sending daily admin reports...');
+
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+
+    // Get all units with their admin assignments
+    const units = await this.prisma.unit.findMany({
+      include: {
+        adminAssignments: { include: { admin: true } },
+      },
+    });
+
+    let reportsSent = 0;
+
+    for (const unit of units) {
+      // Skip units with no admins
+      if (!unit.adminAssignments.length) continue;
+
+      // Get today's completions for this unit
+      const completions = await this.prisma.choreCompletion.findMany({
+        where: {
+          chore: { unitId: unit.id },
+          occupant: { choreDay: dayOfWeek, isActive: true },
+          schedule: { weekStart: { lte: today } },
+        },
+        include: {
+          occupant: true,
+          chore: true,
+        },
+      });
+
+      // Skip if no chores were due today
+      if (!completions.length) continue;
+
+      // Format date
+      const dateStr = today.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+      });
+
+      // Send to each admin
+      for (const assignment of unit.adminAssignments) {
+        await this.emailService.sendDailyChoreReport(
+          assignment.admin.email,
+          assignment.admin.name,
+          unit.name,
+          dateStr,
+          completions.map((c) => ({
+            occupantName: c.occupant.name,
+            choreName: c.chore.name,
+            status: c.status,
+            completedAt: c.completedAt,
+          })),
+        );
+        reportsSent++;
+      }
+    }
+
+    this.logger.log(`Sent ${reportsSent} daily admin reports`);
   }
 }

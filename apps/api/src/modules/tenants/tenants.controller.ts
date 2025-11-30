@@ -23,7 +23,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UploadsService } from '../uploads/uploads.service';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, JwtPayload } from '../auth/auth.service';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -40,8 +40,8 @@ export class TenantsController {
   }
 
   @Get()
-  findAll(@Query('unitId') unitId?: string) {
-    return this.tenantsService.findAll(unitId);
+  findAll(@Query('unitId') unitId?: string, @CurrentUser() user?: JwtPayload) {
+    return this.tenantsService.findAll(unitId, user?.adminRole, user?.unitIds);
   }
 
   @Get(':id')

@@ -21,6 +21,7 @@ describe('ChoresService', () => {
           useValue: {
             getOrCreateCurrentSchedule: jest.fn(),
             getScheduleForWeek: jest.fn(),
+            getOrCreateScheduleForWeek: jest.fn(),
           },
         },
       ],
@@ -50,6 +51,189 @@ describe('ChoresService', () => {
     });
   });
 
+  describe('createChoreDefinition', () => {
+    it('should create a chore definition with auto-incremented sortOrder', async () => {
+      const mockChore = {
+        id: 'chore-1',
+        name: 'Kitchen',
+        description: 'Clean kitchen',
+        unitId: 'unit-1',
+        sortOrder: 3,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      prisma.choreDefinition.findFirst.mockResolvedValue({ sortOrder: 2 } as any);
+      prisma.choreDefinition.create.mockResolvedValue(mockChore as any);
+
+      const result = await service.createChoreDefinition({
+        name: 'Kitchen',
+        description: 'Clean kitchen',
+        unitId: 'unit-1',
+      });
+
+      expect(result).toEqual(mockChore);
+      expect(prisma.choreDefinition.create).toHaveBeenCalledWith({
+        data: {
+          name: 'Kitchen',
+          description: 'Clean kitchen',
+          unitId: 'unit-1',
+          sortOrder: 3,
+          isActive: true,
+        },
+      });
+    });
+
+    it('should create first chore with sortOrder 1', async () => {
+      prisma.choreDefinition.findFirst.mockResolvedValue(null);
+      prisma.choreDefinition.create.mockResolvedValue({ id: 'chore-1', sortOrder: 1 } as any);
+
+      await service.createChoreDefinition({
+        name: 'Kitchen',
+        unitId: 'unit-1',
+      });
+
+      expect(prisma.choreDefinition.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ sortOrder: 1 }),
+      });
+    });
+
+    it('should use provided sortOrder if specified', async () => {
+      prisma.choreDefinition.findFirst.mockResolvedValue({ sortOrder: 5 } as any);
+      prisma.choreDefinition.create.mockResolvedValue({ id: 'chore-1', sortOrder: 10 } as any);
+
+      await service.createChoreDefinition({
+        name: 'Kitchen',
+        unitId: 'unit-1',
+        sortOrder: 10,
+      });
+
+      expect(prisma.choreDefinition.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ sortOrder: 10 }),
+      });
+    });
+  });
+
+  describe('updateChoreDefinition', () => {
+    it('should update chore definition', async () => {
+      const updatedChore = {
+        id: 'chore-1',
+        name: 'Updated Kitchen',
+        sortOrder: 5,
+      };
+
+      prisma.choreDefinition.update.mockResolvedValue(updatedChore as any);
+
+      const result = await service.updateChoreDefinition('chore-1', {
+        name: 'Updated Kitchen',
+        sortOrder: 5,
+      });
+
+      expect(result).toEqual(updatedChore);
+      expect(prisma.choreDefinition.update).toHaveBeenCalledWith({
+        where: { id: 'chore-1' },
+        data: { name: 'Updated Kitchen', sortOrder: 5 },
+      });
+    });
+  });
+
+  describe('deleteChoreDefinition', () => {
+    it('should soft delete chore definition by setting isActive to false', async () => {
+      const deletedChore = { id: 'chore-1', isActive: false };
+
+      prisma.choreDefinition.update.mockResolvedValue(deletedChore as any);
+
+      const result = await service.deleteChoreDefinition('chore-1');
+
+      expect(result).toEqual(deletedChore);
+      expect(prisma.choreDefinition.update).toHaveBeenCalledWith({
+        where: { id: 'chore-1' },
+        data: { isActive: false },
+      });
+    });
+  });
+
+  describe('getCurrentSchedule', () => {
+    it('should return current schedule', async () => {
+      const mockSchedule = { id: 'schedule-1', weekId: '2024-W48' };
+      const mockFullSchedule = { id: 'schedule-1', weekId: '2024-W48', completions: [] };
+
+      scheduleService.getOrCreateCurrentSchedule.mockResolvedValue(mockSchedule as any);
+      scheduleService.getScheduleForWeek.mockResolvedValue(mockFullSchedule as any);
+
+      const result = await service.getCurrentSchedule('unit-1');
+
+      expect(result).toEqual(mockFullSchedule);
+      expect(scheduleService.getOrCreateCurrentSchedule).toHaveBeenCalledWith('unit-1');
+      expect(scheduleService.getScheduleForWeek).toHaveBeenCalledWith('2024-W48');
+    });
+
+    it('should return empty when no schedule exists', async () => {
+      scheduleService.getOrCreateCurrentSchedule.mockResolvedValue(null);
+
+      const result = await service.getCurrentSchedule('unit-1');
+
+      expect(result).toEqual({ weekId: null, completions: [] });
+    });
+  });
+
+  describe('getWeeklyScheduleView', () => {
+    it('should return schedule grouped by day', async () => {
+      const mockOccupants = [
+        {
+          id: 'occ-1',
+          name: 'John',
+          choreDay: 1,
+          tenant: { room: { roomNumber: '101' } },
+        },
+        {
+          id: 'occ-2',
+          name: 'Jane',
+          choreDay: 3,
+          tenant: { room: { roomNumber: '102' } },
+        },
+      ];
+
+      const mockChores = [
+        { id: 'chore-1', name: 'Kitchen', description: 'Clean kitchen' },
+        { id: 'chore-2', name: 'Bathroom', description: null },
+      ];
+
+      prisma.occupant.findMany.mockResolvedValue(mockOccupants as any);
+      prisma.choreDefinition.findMany.mockResolvedValue(mockChores as any);
+
+      const result = await service.getWeeklyScheduleView('unit-1');
+
+      expect(result).toHaveLength(7);
+      expect(result[0].day).toBe(0);
+      expect(result[0].occupants).toHaveLength(0);
+      expect(result[1].day).toBe(1);
+      expect(result[1].occupants).toHaveLength(1);
+      expect(result[1].occupants[0].name).toBe('John');
+      expect(result[1].occupants[0].chores).toHaveLength(2);
+      expect(result[3].occupants[0].name).toBe('Jane');
+    });
+
+    it('should handle occupants without rooms', async () => {
+      const mockOccupants = [
+        {
+          id: 'occ-1',
+          name: 'John',
+          choreDay: 1,
+          tenant: { room: null },
+        },
+      ];
+
+      prisma.occupant.findMany.mockResolvedValue(mockOccupants as any);
+      prisma.choreDefinition.findMany.mockResolvedValue([]);
+
+      const result = await service.getWeeklyScheduleView('unit-1');
+
+      expect(result[1].occupants[0].roomNumber).toBe('N/A');
+    });
+  });
+
   describe('getScheduleByWeek', () => {
     it('should return schedule for a given week', async () => {
       const mockSchedule = {
@@ -72,6 +256,21 @@ describe('ChoresService', () => {
 
       await expect(service.getScheduleByWeek('2024-11-25')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should create schedule when unitId is provided and schedule does not exist', async () => {
+      const mockSchedule = { id: 'schedule-1', weekId: '2024-11-25' };
+
+      scheduleService.getScheduleForWeek.mockResolvedValue(null);
+      scheduleService.getOrCreateScheduleForWeek.mockResolvedValue(mockSchedule as any);
+
+      const result = await service.getScheduleByWeek('2024-11-25', 'unit-1');
+
+      expect(result).toEqual(mockSchedule);
+      expect(scheduleService.getOrCreateScheduleForWeek).toHaveBeenCalledWith(
+        '2024-11-25',
+        'unit-1',
       );
     });
   });
@@ -403,6 +602,41 @@ describe('ChoresService', () => {
       await expect(service.getTodaysChores('invalid-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should return empty chores when tenant has no room', async () => {
+      const today = new Date().getDay();
+      const mockTenant = {
+        id: 'tenant-1',
+        occupants: [{ id: 'occupant-1', name: 'John', choreDay: today, isActive: true }],
+        room: null,
+      };
+
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+
+      const result = await service.getTodaysChores('tenant-1');
+
+      expect(result.isChoreDay).toBe(true);
+      expect(result.occupants).toEqual(mockTenant.occupants);
+      expect(result.chores).toEqual([]);
+    });
+
+    it('should return empty chores when no schedule exists', async () => {
+      const today = new Date().getDay();
+      const mockTenant = {
+        id: 'tenant-1',
+        occupants: [{ id: 'occupant-1', name: 'John', choreDay: today, isActive: true }],
+        room: { unitId: 'unit-1', unit: {} },
+      };
+
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+      scheduleService.getOrCreateCurrentSchedule.mockResolvedValue(null);
+
+      const result = await service.getTodaysChores('tenant-1');
+
+      expect(result.isChoreDay).toBe(true);
+      expect(result.occupants).toEqual(mockTenant.occupants);
+      expect(result.chores).toEqual([]);
     });
   });
 });
