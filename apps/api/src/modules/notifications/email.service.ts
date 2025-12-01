@@ -15,9 +15,13 @@ export class EmailService {
     this.fromEmail =
       this.configService.get<string>('EMAIL_FROM') ||
       'Rentably <noreply@rentably.app>';
+    this.logger.log(`EmailService initialized with provider: ${provider.constructor.name}`);
+    this.logger.log(`Provider configured: ${provider.isConfigured()}`);
+    this.logger.log(`From email: ${this.fromEmail}`);
   }
 
   async sendMagicLink(email: string, verifyUrl: string): Promise<void> {
+    this.logger.log(`=== sendMagicLink called for ${email} ===`);
     const subject = 'Sign in to Rentably';
     const html = `
       <!DOCTYPE html>

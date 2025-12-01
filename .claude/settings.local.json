@@ -20,7 +20,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npx jest:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pnpm add:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

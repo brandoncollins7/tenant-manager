@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,6 +23,8 @@ export interface JwtPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -30,12 +33,14 @@ export class AuthService {
   ) {}
 
   async requestMagicLink(email: string): Promise<{ message: string }> {
+    this.logger.log(`=== requestMagicLink called for: ${email} ===`);
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if tenant exists
     const tenant = await this.prisma.tenant.findUnique({
       where: { email: normalizedEmail },
     });
+    this.logger.log(`Tenant found: ${!!tenant}`);
 
     // Check if admin exists
     const admin = await this.prisma.admin.findUnique({
