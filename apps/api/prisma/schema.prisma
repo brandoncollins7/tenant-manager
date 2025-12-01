@@ -204,8 +204,8 @@ model ChoreCompletion {
   notes           String?
 
   schedule ChoreSchedule   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  occupant Occupant        @relation(fields: [occupantId], references: [id])
-  chore    ChoreDefinition @relation(fields: [choreId], references: [id])
+  occupant Occupant        @relation(fields: [occupantId], references: [id], onDelete: Cascade)
+  chore    ChoreDefinition @relation(fields: [choreId], references: [id], onDelete: Cascade)
 
   @@unique([scheduleId, occupantId, choreId])
   @@map("chore_completions")
