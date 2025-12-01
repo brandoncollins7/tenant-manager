@@ -21,12 +21,14 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { UploadLeaseDto } from './dto/upload-lease.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { UploadsService } from '../uploads/uploads.service';
 import { AuthService, JwtPayload } from '../auth/auth.service';
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
 export class TenantsController {
   constructor(
     private readonly tenantsService: TenantsService,
@@ -45,21 +47,25 @@ export class TenantsController {
   }
 
   @Get(':id')
+  @UnitScoped('tenant')
   findOne(@Param('id') id: string) {
     return this.tenantsService.findOne(id);
   }
 
   @Patch(':id')
+  @UnitScoped('tenant')
   update(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
     return this.tenantsService.update(id, dto);
   }
 
   @Delete(':id')
+  @UnitScoped('tenant')
   remove(@Param('id') id: string) {
     return this.tenantsService.remove(id);
   }
 
   @Post(':id/send-login-link')
+  @UnitScoped('tenant')
   async sendLoginLink(@Param('id') id: string) {
     const tenant = await this.tenantsService.findOne(id);
     return this.authService.requestMagicLink(tenant.email);
@@ -76,6 +82,7 @@ export class TenantsController {
   }
 
   @Post(':id/lease')
+  @UnitScoped('tenant')
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -118,11 +125,13 @@ export class TenantsController {
   }
 
   @Get(':id/leases')
+  @UnitScoped('tenant')
   async getLeaseHistory(@Param('id') id: string) {
     return this.tenantsService.getLeaseHistory(id);
   }
 
   @Get(':id/leases/:version')
+  @UnitScoped('tenant')
   async getLeaseVersion(
     @Param('id') id: string,
     @Param('version') version: string,
@@ -150,6 +159,7 @@ export class TenantsController {
   }
 
   @Get(':id/lease')
+  @UnitScoped('tenant')
   async getCurrentLease(@Param('id') id: string, @Res() res: Response) {
     const leaseDoc = await this.tenantsService.getCurrentLease(id);
 

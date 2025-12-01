@@ -14,11 +14,13 @@ import { Response } from 'express';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
+import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
 @Controller('uploads')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
@@ -52,6 +54,7 @@ export class UploadsController {
   }
 
   @Get(':tenantId/:filename')
+  @UnitScoped('photo', 'tenantId')
   async getPhoto(
     @Param('tenantId') tenantId: string,
     @Param('filename') filename: string,

@@ -14,11 +14,13 @@ import { CreateOccupantDto } from './dto/create-occupant.dto';
 import { UpdateOccupantDto } from './dto/update-occupant.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
+import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
 @Controller('occupants')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UnitAccessGuard)
 export class OccupantsController {
   constructor(private readonly occupantsService: OccupantsService) {}
 
@@ -46,6 +48,7 @@ export class OccupantsController {
   // Admin-only routes for managing occupants (must come before :id routes)
   @Post('admin/tenant/:tenantId')
   @UseGuards(AdminGuard)
+  @UnitScoped('tenant', 'tenantId')
   createForTenant(
     @Param('tenantId') tenantId: string,
     @Body() dto: CreateOccupantDto,
@@ -55,21 +58,28 @@ export class OccupantsController {
 
   @Get('admin/tenant/:tenantId')
   @UseGuards(AdminGuard)
+  @UnitScoped('tenant', 'tenantId')
   findByTenantAdmin(@Param('tenantId') tenantId: string) {
     return this.occupantsService.findByTenant(tenantId);
   }
 
   @Get(':id')
+  @UseGuards(AdminGuard)
+  @UnitScoped('occupant')
   findOne(@Param('id') id: string) {
     return this.occupantsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(AdminGuard)
+  @UnitScoped('occupant')
   update(@Param('id') id: string, @Body() dto: UpdateOccupantDto) {
     return this.occupantsService.update(id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(AdminGuard)
+  @UnitScoped('occupant')
   remove(@Param('id') id: string) {
     return this.occupantsService.remove(id);
   }
