@@ -22,7 +22,8 @@
       "Bash(npx jest:*)",
       "WebSearch",
       "Bash(pnpm add:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(pnpm install)"
     ],
     "deny": [],
     "ask": []
