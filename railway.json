@@ -4,7 +4,7 @@
     "buildCommand": "pnpm install && cd apps/web && pnpm build && cd ../api && npx prisma generate && pnpm build"
   },
   "deploy": {
-    "startCommand": "cd apps/api && npx prisma migrate deploy && npx prisma db seed && node dist/src/main",
+    "startCommand": "cd apps/api && && pnpm -r run testre && npx prisma migrate deploy && npx prisma db seed && node dist/src/main",
     "healthcheckPath": "/api/health",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10

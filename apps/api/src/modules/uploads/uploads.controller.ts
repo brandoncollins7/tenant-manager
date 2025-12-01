@@ -13,15 +13,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { AdminGuard } from '../../common/guards/admin.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
 @Controller('uploads')
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Post('photo')
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB

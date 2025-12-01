@@ -222,3 +222,14 @@ MAX_FILE_SIZE=5242880
 - Chore days are 0-6 (Sunday-Saturday)
 - Week IDs are ISO date strings of the Monday (e.g., "2024-11-25")
 - Photos are stored locally in `apps/api/uploads/` (compressed to max 1200x1200 JPEG)
+
+## Security
+
+All API endpoints must be secured with appropriate guards:
+- `JwtAuthGuard` - Required for all endpoints except auth routes (`/auth/request-link`, `/auth/verify`) and health check
+- `AdminGuard` - Required for admin-only operations
+- `SuperAdminGuard` - Required for super admin operations (managing other admins)
+
+**Unit-scoped access**: Non-super admins can only view/manage data for units they are assigned to. This includes tenants, occupants, chores, photos, and all other unit-related data. Always verify the admin has access to the relevant unit before returning data.
+
+When adding new endpoints, always apply `@UseGuards(JwtAuthGuard)` at minimum. Never leave endpoints publicly accessible unless explicitly required.
