@@ -5,9 +5,9 @@
   "description": "Rental management made simple",
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
-    "dev:1": "PORT=3001 VITE_PORT=5174 API_PORT=3001 pnpm -r --parallel run dev",
-    "dev:2": "PORT=3002 VITE_PORT=5175 API_PORT=3002 pnpm -r --parallel run dev",
-    "dev:3": "PORT=3003 VITE_PORT=5176 API_PORT=3003 pnpm -r --parallel run dev",
+    "dev:1": "PORT=3001 VITE_PORT=5174 API_PORT=3001 FRONTEND_URL=http://localhost:5174 pnpm -r --parallel run dev",
+    "dev:2": "PORT=3002 VITE_PORT=5175 API_PORT=3002 FRONTEND_URL=http://localhost:5175 pnpm -r --parallel run dev",
+    "dev:3": "PORT=3003 VITE_PORT=5176 API_PORT=3003 FRONTEND_URL=http://localhost:5176 pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",
