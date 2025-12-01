@@ -67,10 +67,10 @@ export function DevEmailModal({ email, onClose }: DevEmailModalProps) {
           {/* Email content iframe */}
           <div className="flex-1 overflow-auto bg-white">
             <iframe
-              srcDoc={email.html}
+              srcDoc={`<base target="_blank">${email.html}`}
               title="Email preview"
               className="w-full h-full min-h-[400px] border-0"
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             />
           </div>
         </div>
