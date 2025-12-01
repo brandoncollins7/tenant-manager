@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { usePageTracking } from './hooks/usePageTracking';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
+import { DevEmailListener } from './components/dev/DevEmailListener';
 import { LoginPage } from './pages/LoginPage';
 import { VerifyPage } from './pages/VerifyPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -145,6 +146,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <DevEmailListener />
     </BrowserRouter>
   );
 }

@@ -23,7 +23,10 @@
       "WebSearch",
       "Bash(pnpm add:*)",
       "Bash(mkdir:*)",
-      "Bash(pnpm install)"
+      "Bash(pnpm install)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx nest build:*)"
     ],
     "deny": [],
     "ask": []

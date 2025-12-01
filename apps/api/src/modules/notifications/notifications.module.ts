@@ -4,17 +4,25 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { EmailService } from './email.service';
 import { NotificationScheduler } from './notification.scheduler';
+import { DevEmailController } from './dev-email.controller';
 import {
   EMAIL_PROVIDER,
   ResendProvider,
   MailtrapProvider,
   ConsoleProvider,
+  BrowserProvider,
 } from './email';
 
 const logger = new Logger('EmailProviderFactory');
 
+// Include DevEmailController only in non-production
+const controllers =
+  process.env.NODE_ENV === 'production'
+    ? [NotificationsController]
+    : [NotificationsController, DevEmailController];
+
 @Module({
-  controllers: [NotificationsController],
+  controllers,
   providers: [
     NotificationsService,
     EmailService,
@@ -31,6 +39,9 @@ const logger = new Logger('EmailProviderFactory');
           case 'mailtrap':
             logger.log('Creating MailtrapProvider');
             return new MailtrapProvider(configService);
+          case 'browser':
+            logger.log('Creating BrowserProvider (dev toast notifications)');
+            return new BrowserProvider();
           default:
             logger.log('Creating ConsoleProvider (default)');
             return new ConsoleProvider();
