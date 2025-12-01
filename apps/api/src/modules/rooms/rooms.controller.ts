@@ -14,9 +14,11 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
+import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 
 @Controller('rooms')
-@UseGuards(JwtAuthGuard, AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
 export class RoomsController {
   constructor(private readonly roomsService: RoomsService) {}
 
@@ -31,16 +33,19 @@ export class RoomsController {
   }
 
   @Get(':id')
+  @UnitScoped('room')
   findOne(@Param('id') id: string) {
     return this.roomsService.findOne(id);
   }
 
   @Patch(':id')
+  @UnitScoped('room')
   update(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
     return this.roomsService.update(id, dto);
   }
 
   @Delete(':id')
+  @UnitScoped('room')
   remove(@Param('id') id: string) {
     return this.roomsService.remove(id);
   }
