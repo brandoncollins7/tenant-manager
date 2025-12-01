@@ -1,19 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
 import { randomUUID } from 'crypto';
+import { EMAIL_PROVIDER, EmailProvider } from './email';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: Resend | null = null;
   private readonly fromEmail: string;
 
-  constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    if (apiKey && apiKey !== 're_xxxxx') {
-      this.resend = new Resend(apiKey);
-    }
+  constructor(
+    private configService: ConfigService,
+    @Inject(EMAIL_PROVIDER) private provider: EmailProvider,
+  ) {
     this.fromEmail =
       this.configService.get<string>('EMAIL_FROM') ||
       'Rentably <noreply@rentably.app>';
@@ -48,10 +46,10 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
         this.logger.log(`Attempting to send email from: ${this.fromEmail} to: ${email}`);
-        const result = await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: email,
           subject,
@@ -63,11 +61,9 @@ export class EmailService {
             { name: 'category', value: 'auth' },
           ],
         });
-        this.logger.log(`Resend API response:`, JSON.stringify(result));
         this.logger.log(`Magic link email sent to ${email}`);
       } catch (error) {
         this.logger.error(`Failed to send magic link email to ${email}`, error);
-        this.logger.error(`Error details:`, JSON.stringify(error));
         throw error;
       }
     } else {
@@ -104,9 +100,9 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
-        await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: email,
           subject,
@@ -149,9 +145,9 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
-        await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: email,
           subject,
@@ -206,9 +202,9 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
-        await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: adminEmail,
           subject,
@@ -261,9 +257,9 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
-        await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: tenantEmail,
           subject,
@@ -359,10 +355,10 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
         this.logger.log(`Attempting to send admin onboarding email from: ${this.fromEmail} to: ${email}`);
-        const result = await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: email,
           subject,
@@ -374,11 +370,9 @@ export class EmailService {
             { name: 'category', value: 'admin-onboarding' },
           ],
         });
-        this.logger.log(`Resend API response:`, JSON.stringify(result));
         this.logger.log(`Admin onboarding email sent to ${email}`);
       } catch (error) {
         this.logger.error(`Failed to send admin onboarding email to ${email}`, error);
-        this.logger.error(`Error details:`, JSON.stringify(error));
         throw error;
       }
     } else {
@@ -476,9 +470,9 @@ export class EmailService {
       </html>
     `;
 
-    if (this.resend) {
+    if (this.provider.isConfigured()) {
       try {
-        await this.resend.emails.send({
+        await this.provider.send({
           from: this.fromEmail,
           to: adminEmail,
           subject,
