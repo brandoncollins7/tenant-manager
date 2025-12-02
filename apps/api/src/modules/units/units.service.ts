@@ -21,10 +21,12 @@ export class UnitsService {
   }
 
   async findAll(adminRole?: string, unitIds?: string[]) {
-    const where =
-      adminRole === 'PROPERTY_MANAGER' && unitIds?.length
-        ? { id: { in: unitIds } }
-        : {};
+    // Property managers only see units they're assigned to
+    // If they have no assignments, they see nothing
+    let where = {};
+    if (adminRole === 'PROPERTY_MANAGER') {
+      where = { id: { in: unitIds ?? [] } };
+    }
 
     const units = await this.prisma.unit.findMany({
       where,

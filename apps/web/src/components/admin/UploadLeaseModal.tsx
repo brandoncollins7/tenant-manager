@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { tenantsApi } from '../../api/tenants';
+import { invalidateTenantQueries } from '../../utils/queryKeys';
 
 interface UploadLeaseModalProps {
   isOpen: boolean;
@@ -26,8 +27,8 @@ export function UploadLeaseModal({
   const uploadMutation = useMutation({
     mutationFn: () => tenantsApi.uploadLease(tenantId, leaseFile!, notes),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] });
-      queryClient.invalidateQueries({ queryKey: ['lease-history', tenantId] });
+      // Use centralized invalidation to refresh all tenant-related queries
+      invalidateTenantQueries(queryClient, tenantId);
       handleClose();
     },
   });

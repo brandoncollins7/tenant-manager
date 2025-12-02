@@ -6,6 +6,7 @@ import { PhotoCapture } from './PhotoCapture';
 import { uploadsApi } from '../../api/uploads';
 import { choresApi } from '../../api/chores';
 import { trackEvent, EVENTS } from '../../utils/analytics';
+import { invalidateChoreQueries } from '../../utils/queryKeys';
 import type { ChoreCompletion } from '../../types';
 
 interface CompletionModalProps {
@@ -45,8 +46,8 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ['chores'] });
-      queryClient.invalidateQueries({ queryKey: ['todaysChores'] });
+      // Use centralized invalidation to refresh all chore-related queries
+      invalidateChoreQueries(queryClient);
       handleClose();
     },
   });

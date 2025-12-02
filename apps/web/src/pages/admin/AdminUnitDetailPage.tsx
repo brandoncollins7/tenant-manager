@@ -4,28 +4,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Plus,
-  Mail,
-  Phone,
-  Calendar,
   Trash2,
-  Pencil,
-  Upload,
-  History,
-  FileText,
   DoorOpen,
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
 import { apiClient } from '../../api/client';
 import { tenantsApi } from '../../api/tenants';
 import { DAYS_OF_WEEK } from '../../types';
 import { extractErrorMessage } from '../../utils/errors';
+import { useAuth } from '../../context/AuthContext';
 
 type TabType = 'tenants' | 'rooms';
 
@@ -76,6 +71,8 @@ export function AdminUnitDetailPage() {
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [activeTab, setActiveTab] = useState<TabType>('tenants');
 
   // Tenant-related state
@@ -95,6 +92,20 @@ export function AdminUnitDetailPage() {
     tenantId: string;
     tenantName: string;
   } | null>(null);
+  const [editTenantModal, setEditTenantModal] = useState<{
+    tenantId: string;
+    currentData: { email: string; phone?: string; startDate: string };
+  } | null>(null);
+  const [editTenantForm, setEditTenantForm] = useState({
+    email: '',
+    phone: '',
+    startDate: '',
+  });
+  const [addOccupantModal, setAddOccupantModal] = useState<{
+    tenantId: string;
+  } | null>(null);
+  const [newOccupantName, setNewOccupantName] = useState('');
+  const [newOccupantChoreDay, setNewOccupantChoreDay] = useState(0);
 
   // Room-related state
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -213,6 +224,54 @@ export function AdminUnitDetailPage() {
     },
     onSuccess: () => {
       toast.success('Login link sent successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      return tenantsApi.impersonate(tenantId);
+    },
+    onSuccess: (data) => {
+      window.open(data.url, '_blank');
+      toast.success('Opening tenant session in new tab');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const updateTenantMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { email: string; phone: string; startDate: string } }) => {
+      await apiClient.patch(`/tenants/${id}`, {
+        email: data.email,
+        phone: data.phone || null,
+        startDate: new Date(data.startDate).toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'tenants'] });
+      setEditTenantModal(null);
+      setEditTenantForm({ email: '', phone: '', startDate: '' });
+      toast.success('Tenant updated successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const createOccupantMutation = useMutation({
+    mutationFn: async ({ tenantId, data }: { tenantId: string; data: { name: string; choreDay: number } }) => {
+      await apiClient.post(`/occupants/admin/tenant/${tenantId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'tenants'] });
+      setAddOccupantModal(null);
+      setNewOccupantName('');
+      setNewOccupantChoreDay(0);
+      toast.success('Occupant added successfully');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -404,155 +463,66 @@ export function AdminUnitDetailPage() {
             </Card>
           ) : (
             tenants?.map((tenant) => (
-              <Card key={tenant.id}>
-                <CardHeader className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      Room {tenant.room?.roomNumber ?? 'N/A'}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {tenant.isActive ? 'Active' : 'Inactive'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setTenantToDelete(tenant)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete tenant"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </CardHeader>
-                <CardBody className="space-y-4">
-                  {/* Contact Info */}
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-4 h-4" />
-                      {tenant.email}
-                    </span>
-                    {tenant.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        {tenant.phone}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      Since {new Date(tenant.startDate).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {/* Lease Management */}
-                  <div className="flex items-center gap-2 border-t border-gray-200 pt-4">
-                    <button
-                      onClick={() => sendLoginLinkMutation.mutate(tenant.id)}
-                      disabled={sendLoginLinkMutation.isPending}
-                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1 disabled:opacity-50"
-                      title="Send login link email"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Resend Login Email
-                    </button>
-
-                    <span className="text-gray-300">|</span>
-
-                    <button
-                      onClick={() =>
-                        setUploadLeaseModal({
-                          isOpen: true,
-                          tenantId: tenant.id,
-                          tenantName: tenant.email,
-                        })
-                      }
-                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                      title="Upload new lease version"
-                    >
-                      <Upload className="w-4 h-4" />
-                      Upload Lease
-                    </button>
-
-                    {tenant.leaseDocument && (
-                      <>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          onClick={() =>
-                            setHistoryModal({
-                              isOpen: true,
-                              tenantId: tenant.id,
-                              tenantName: tenant.email,
-                            })
-                          }
-                          className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                          title="View lease history"
-                        >
-                          <History className="w-4 h-4" />
-                          History
-                        </button>
-                        <span className="text-gray-300">|</span>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const blob = await tenantsApi.getCurrentLeaseBlob(tenant.id);
-                              const url = URL.createObjectURL(blob);
-                              window.open(url, '_blank');
-                            } catch (error) {
-                              toast.error(extractErrorMessage(error));
-                            }
-                          }}
-                          className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
-                          title="View current lease"
-                        >
-                          <FileText className="w-4 h-4" />
-                          View Current
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Occupants */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Occupants ({tenant.occupants?.length ?? 0})
-                    </h4>
-                    {tenant.occupants?.length > 0 ? (
-                      <div className="grid gap-2">
-                        {tenant.occupants.map((occupant) => (
-                          <div
-                            key={occupant.id}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <span className="font-medium text-gray-900">
-                                {occupant.name}
-                              </span>
-                              <span className="text-sm text-gray-600 ml-3">
-                                {DAYS_OF_WEEK[occupant.choreDay]}
-                              </span>
-                            </div>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleEditOccupant(occupant)}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Edit occupant"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setOccupantToDelete(occupant)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete occupant"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No occupants added</p>
-                    )}
-                  </div>
-                </CardBody>
-              </Card>
+              <TenantInfoCard
+                key={tenant.id}
+                tenant={{
+                  id: tenant.id,
+                  email: tenant.email,
+                  phone: tenant.phone,
+                  startDate: tenant.startDate,
+                  isActive: tenant.isActive,
+                  leaseDocument: tenant.leaseDocument,
+                }}
+                occupants={tenant.occupants || []}
+                roomNumber={tenant.room?.roomNumber}
+                isSuperAdmin={isSuperAdmin}
+                isPendingImpersonate={impersonateMutation.isPending}
+                isPendingResendEmail={sendLoginLinkMutation.isPending}
+                onImpersonate={() => impersonateMutation.mutate(tenant.id)}
+                onResendLoginEmail={() => sendLoginLinkMutation.mutate(tenant.id)}
+                onDeleteTenant={() => setTenantToDelete(tenant)}
+                onEditTenant={() => {
+                  setEditTenantModal({
+                    tenantId: tenant.id,
+                    currentData: {
+                      email: tenant.email,
+                      phone: tenant.phone,
+                      startDate: tenant.startDate,
+                    },
+                  });
+                  setEditTenantForm({
+                    email: tenant.email,
+                    phone: tenant.phone || '',
+                    startDate: tenant.startDate ? new Date(tenant.startDate).toISOString().split('T')[0] : '',
+                  });
+                }}
+                onUploadLease={() =>
+                  setUploadLeaseModal({
+                    isOpen: true,
+                    tenantId: tenant.id,
+                    tenantName: tenant.email,
+                  })
+                }
+                onViewLeaseHistory={() =>
+                  setHistoryModal({
+                    isOpen: true,
+                    tenantId: tenant.id,
+                    tenantName: tenant.email,
+                  })
+                }
+                onViewCurrentLease={async () => {
+                  try {
+                    const blob = await tenantsApi.getCurrentLeaseBlob(tenant.id);
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                  } catch (error) {
+                    toast.error(extractErrorMessage(error));
+                  }
+                }}
+                onAddOccupant={() => setAddOccupantModal({ tenantId: tenant.id })}
+                onEditOccupant={(occupant) => handleEditOccupant(occupant)}
+                onDeleteOccupant={(occupant) => setOccupantToDelete(occupant)}
+              />
             ))
           )}
         </div>
@@ -853,6 +823,142 @@ export function AdminUnitDetailPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Tenant Modal */}
+      <Modal
+        isOpen={!!editTenantModal}
+        onClose={() => {
+          setEditTenantModal(null);
+          setEditTenantForm({ email: '', phone: '', startDate: '' });
+        }}
+        title="Edit Tenant"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editTenantModal) {
+              updateTenantMutation.mutate({ id: editTenantModal.tenantId, data: editTenantForm });
+            }
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="Email"
+            type="email"
+            value={editTenantForm.email}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, email: e.target.value })}
+            placeholder="tenant@example.com"
+            required
+          />
+
+          <Input
+            label="Phone (Optional)"
+            type="tel"
+            value={editTenantForm.phone}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
+            placeholder="+1234567890"
+          />
+
+          <Input
+            label="Start Date"
+            type="date"
+            value={editTenantForm.startDate}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, startDate: e.target.value })}
+            required
+          />
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setEditTenantModal(null);
+                setEditTenantForm({ email: '', phone: '', startDate: '' });
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={updateTenantMutation.isPending || !editTenantForm.email || !editTenantForm.startDate}
+            >
+              {updateTenantMutation.isPending ? 'Updating...' : 'Update Tenant'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Occupant Modal */}
+      <Modal
+        isOpen={!!addOccupantModal}
+        onClose={() => {
+          setAddOccupantModal(null);
+          setNewOccupantName('');
+          setNewOccupantChoreDay(0);
+        }}
+        title="Add Occupant"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (addOccupantModal && newOccupantName) {
+              createOccupantMutation.mutate({
+                tenantId: addOccupantModal.tenantId,
+                data: { name: newOccupantName, choreDay: newOccupantChoreDay },
+              });
+            }
+          }}
+          className="space-y-4"
+        >
+          <Input
+            label="Name"
+            value={newOccupantName}
+            onChange={(e) => setNewOccupantName(e.target.value)}
+            placeholder="Enter occupant name"
+            required
+          />
+          <div className="w-full">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Chore Day
+            </label>
+            <select
+              value={newOccupantChoreDay}
+              onChange={(e) => setNewOccupantChoreDay(parseInt(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+              required
+            >
+              {DAYS_OF_WEEK.map((day, index) => (
+                <option key={index} value={index}>
+                  {day}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setAddOccupantModal(null);
+                setNewOccupantName('');
+                setNewOccupantChoreDay(0);
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="flex-1"
+              disabled={createOccupantMutation.isPending || !newOccupantName}
+            >
+              {createOccupantMutation.isPending ? 'Adding...' : 'Add Occupant'}
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       {/* Add Room Modal */}
