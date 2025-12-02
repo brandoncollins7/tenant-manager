@@ -20,6 +20,97 @@ describe('StatsService', () => {
     prisma = module.get(PrismaService);
   });
 
+  describe('getDashboardStats', () => {
+    it('should return dashboard stats for super admin', async () => {
+      prisma.request.count.mockResolvedValue(3);
+      prisma.request.findMany.mockResolvedValue([
+        {
+          id: 'req-1',
+          type: 'MAINTENANCE_ISSUE',
+          description: 'Broken sink',
+          createdAt: new Date(),
+          tenant: { email: 'tenant@test.com', occupants: [{ name: 'John' }] },
+          unit: { name: 'Building A' },
+        },
+      ] as any);
+      prisma.choreCompletion.count.mockResolvedValue(2);
+      // First call: overdue chores list, Second call: completion rate
+      prisma.choreCompletion.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 'chore-1',
+            occupant: {
+              name: 'John',
+              tenant: { room: { roomNumber: '101', unit: { name: 'Building A' } } },
+            },
+            chore: { name: 'Kitchen' },
+            schedule: { weekId: '2024-01-01', weekStart: new Date() },
+          },
+        ] as any)
+        .mockResolvedValueOnce([
+          { status: 'COMPLETED' },
+          { status: 'COMPLETED' },
+          { status: 'PENDING' },
+        ] as any);
+
+      const result = await service.getDashboardStats('SUPER_ADMIN', []);
+
+      expect(result.stats.pendingRequests).toBe(3);
+      expect(result.stats.overdueChores).toBe(2);
+      expect(result.stats.completionRate).toBe(67); // 2/3 = 66.67% rounded
+      expect(result.pendingRequests).toHaveLength(1);
+      expect(result.overdueChores).toHaveLength(1);
+    });
+
+    it('should filter by unit for property managers', async () => {
+      prisma.request.count.mockResolvedValue(1);
+      prisma.request.findMany.mockResolvedValue([]);
+      prisma.choreCompletion.count.mockResolvedValue(0);
+      prisma.choreCompletion.findMany.mockResolvedValue([]);
+
+      await service.getDashboardStats('PROPERTY_MANAGER', ['unit-1', 'unit-2']);
+
+      expect(prisma.request.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            unitId: { in: ['unit-1', 'unit-2'] },
+          }),
+        }),
+      );
+    });
+
+    it('should return 0 completion rate when no completions', async () => {
+      prisma.request.count.mockResolvedValue(0);
+      prisma.request.findMany.mockResolvedValue([]);
+      prisma.choreCompletion.count.mockResolvedValue(0);
+      prisma.choreCompletion.findMany.mockResolvedValue([]);
+
+      const result = await service.getDashboardStats('SUPER_ADMIN', []);
+
+      expect(result.stats.completionRate).toBe(0);
+    });
+
+    it('should use tenant email when no occupant name', async () => {
+      prisma.request.count.mockResolvedValue(1);
+      prisma.request.findMany.mockResolvedValue([
+        {
+          id: 'req-1',
+          type: 'CLEANING_SUPPLIES',
+          description: 'Need supplies',
+          createdAt: new Date(),
+          tenant: { email: 'tenant@test.com', occupants: [] },
+          unit: { name: 'Building A' },
+        },
+      ] as any);
+      prisma.choreCompletion.count.mockResolvedValue(0);
+      prisma.choreCompletion.findMany.mockResolvedValue([]);
+
+      const result = await service.getDashboardStats('SUPER_ADMIN', []);
+
+      expect(result.pendingRequests[0].tenantName).toBe('tenant@test.com');
+    });
+  });
+
   describe('getOccupantStats', () => {
     it('should return stats for an occupant with completions', async () => {
       const mockCompletions = [

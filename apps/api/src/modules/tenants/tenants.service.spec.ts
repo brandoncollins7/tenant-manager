@@ -129,6 +129,24 @@ describe('TenantsService', () => {
         orderBy: { createdAt: 'asc' },
       });
     });
+
+    it('should filter by admin unit assignments for property managers', async () => {
+      prisma.tenant.findMany.mockResolvedValue([]);
+
+      await service.findAll(undefined, 'PROPERTY_MANAGER', ['unit-1', 'unit-2']);
+
+      expect(prisma.tenant.findMany).toHaveBeenCalledWith({
+        where: {
+          room: { unitId: { in: ['unit-1', 'unit-2'] } },
+          isActive: true,
+        },
+        include: {
+          occupants: { where: { isActive: true } },
+          room: { include: { unit: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+    });
   });
 
   describe('findOne', () => {
@@ -196,6 +214,68 @@ describe('TenantsService', () => {
       await expect(service.update('invalid-id', { email: 'new@example.com' })).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should update endDate when provided', async () => {
+      const existingTenant = { id: 'tenant-1', email: 'test@example.com' };
+      const updatedTenant = { id: 'tenant-1', endDate: new Date('2025-12-31') };
+
+      prisma.tenant.findUnique.mockResolvedValue(existingTenant as any);
+      prisma.tenant.update.mockResolvedValue(updatedTenant as any);
+
+      await service.update('tenant-1', { endDate: '2025-12-31' });
+
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant-1' },
+        data: { endDate: new Date('2025-12-31') },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should clear endDate when empty string provided', async () => {
+      const existingTenant = { id: 'tenant-1', endDate: new Date() };
+
+      prisma.tenant.findUnique.mockResolvedValue(existingTenant as any);
+      prisma.tenant.update.mockResolvedValue({ ...existingTenant, endDate: null } as any);
+
+      // Empty string should be converted to null by the service
+      await service.update('tenant-1', { endDate: '' });
+
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant-1' },
+        data: { endDate: null },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should disconnect room when roomId is null', async () => {
+      const existingTenant = { id: 'tenant-1', roomId: 'room-1' };
+
+      prisma.tenant.findUnique.mockResolvedValue(existingTenant as any);
+      prisma.tenant.update.mockResolvedValue({ ...existingTenant, roomId: null } as any);
+
+      await service.update('tenant-1', { roomId: null });
+
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant-1' },
+        data: { room: { disconnect: true } },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should connect to new room when roomId provided', async () => {
+      const existingTenant = { id: 'tenant-1', roomId: null };
+
+      prisma.tenant.findUnique.mockResolvedValue(existingTenant as any);
+      prisma.tenant.update.mockResolvedValue({ ...existingTenant, roomId: 'room-2' } as any);
+
+      await service.update('tenant-1', { roomId: 'room-2' });
+
+      expect(prisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant-1' },
+        data: { room: { connect: { id: 'room-2' } } },
+        include: expect.any(Object),
+      });
     });
   });
 

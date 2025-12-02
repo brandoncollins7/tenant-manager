@@ -332,6 +332,49 @@ describe('AuthService', () => {
       );
     });
 
+    it('should include unitIds in JWT for admin with unit assignments', async () => {
+      const mockAdminMagicLink = {
+        id: 'admin-link-1',
+        token: 'admin-token',
+        isUsed: false,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        adminId: 'admin-1',
+        usedAt: null,
+        createdAt: new Date(),
+        admin: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          name: 'Property Manager',
+          role: AdminRole.PROPERTY_MANAGER,
+          createdAt: new Date(),
+          unitAssignments: [
+            { unitId: 'unit-1' },
+            { unitId: 'unit-2' },
+          ],
+        },
+      };
+
+      prisma.magicLink.findUnique.mockResolvedValue(null);
+      prisma.adminMagicLink.findUnique.mockResolvedValue(mockAdminMagicLink);
+      prisma.adminMagicLink.update.mockResolvedValue({
+        ...mockAdminMagicLink,
+        isUsed: true,
+        usedAt: new Date(),
+      });
+
+      const result = await service.verifyMagicLink('admin-token');
+
+      expect(result.accessToken).toBe('mock-jwt-token');
+      expect(jwtService.sign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isAdmin: true,
+          adminId: 'admin-1',
+          adminRole: AdminRole.PROPERTY_MANAGER,
+          unitIds: ['unit-1', 'unit-2'],
+        }),
+      );
+    });
+
     it('should reject expired admin token', async () => {
       const mockAdminMagicLink = {
         id: 'admin-link-1',
@@ -552,6 +595,48 @@ describe('AuthService', () => {
       );
       await expect(service.getLatestMagicLink('unknown@example.com')).rejects.toThrow(
         'User not found',
+      );
+    });
+  });
+
+  describe('createImpersonationLink', () => {
+    it('should create impersonation link for existing tenant', async () => {
+      const mockTenant = {
+        id: 'tenant-1',
+        email: 'tenant@example.com',
+      };
+
+      prisma.tenant.findUnique.mockResolvedValue(mockTenant as any);
+      prisma.magicLink.create.mockResolvedValue({
+        id: 'link-1',
+        token: 'impersonation-token',
+        tenantId: 'tenant-1',
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        isUsed: false,
+        usedAt: null,
+        createdAt: new Date(),
+      });
+
+      const result = await service.createImpersonationLink('tenant-1');
+
+      expect(result.url).toContain('http://localhost:5173/verify?token=');
+      expect(prisma.magicLink.create).toHaveBeenCalledWith({
+        data: {
+          token: expect.any(String),
+          expiresAt: expect.any(Date),
+          tenantId: 'tenant-1',
+        },
+      });
+    });
+
+    it('should throw NotFoundException for non-existent tenant', async () => {
+      prisma.tenant.findUnique.mockResolvedValue(null);
+
+      await expect(service.createImpersonationLink('invalid-tenant')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.createImpersonationLink('invalid-tenant')).rejects.toThrow(
+        'Tenant not found',
       );
     });
   });

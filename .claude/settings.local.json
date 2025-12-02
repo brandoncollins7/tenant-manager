@@ -26,7 +26,8 @@
       "Bash(pnpm install)",
       "Bash(git merge:*)",
       "Bash(git checkout:*)",
-      "Bash(npx nest build:*)"
+      "Bash(npx nest build:*)",
+      "Bash(git worktree:*)"
     ],
     "deny": [],
     "ask": []
