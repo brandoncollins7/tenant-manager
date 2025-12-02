@@ -22,6 +22,7 @@ import { UploadLeaseDto } from './dto/upload-lease.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
+import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { UploadsService } from '../uploads/uploads.service';
@@ -80,6 +81,13 @@ export class TenantsController {
   async sendLoginLink(@Param('id') id: string) {
     const tenant = await this.tenantsService.findOne(id);
     return this.authService.requestMagicLink(tenant.email);
+  }
+
+  @Post(':id/impersonate')
+  @UseGuards(SuperAdminGuard)
+  @UnitScoped('tenant')
+  async impersonate(@Param('id') id: string) {
+    return this.authService.createImpersonationLink(id);
   }
 
   @Post(':id/lease')

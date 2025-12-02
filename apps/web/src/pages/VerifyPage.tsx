@@ -14,8 +14,17 @@ export function VerifyPage() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const hasAttemptedVerification = useRef(false);
+  const hasCleared = useRef(false);
 
   const token = searchParams.get('token');
+
+  // Clear any existing session synchronously on first render
+  // This is important for impersonation where a new tab opens with an existing session
+  if (!hasCleared.current) {
+    hasCleared.current = true;
+    localStorage.removeItem('token');
+    localStorage.removeItem('selectedOccupantId');
+  }
 
   const mutation = useMutation({
     mutationFn: authApi.verifyMagicLink,

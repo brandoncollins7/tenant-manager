@@ -279,6 +279,32 @@ export class AuthService {
     };
   }
 
+  async createImpersonationLink(tenantId: string): Promise<{ url: string }> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store magic link
+    await this.prisma.magicLink.create({
+      data: {
+        token,
+        expiresAt,
+        tenantId: tenant.id,
+      },
+    });
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return { url: `${frontendUrl}/verify?token=${token}` };
+  }
+
   async getLatestMagicLink(email: string) {
     const normalizedEmail = email.toLowerCase().trim();
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');

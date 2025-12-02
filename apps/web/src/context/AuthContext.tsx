@@ -29,6 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
+    // Skip auto-refresh on verify page - let the magic link verification handle it
+    if (window.location.pathname === '/verify') {
+      setIsLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem('token');
     if (!token) {
       setIsLoading(false);

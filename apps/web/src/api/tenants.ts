@@ -41,4 +41,9 @@ export const tenantsApi = {
     const response = await apiClient.post(`/tenants/${tenantId}/send-login-link`);
     return response.data;
   },
+
+  impersonate: async (tenantId: string): Promise<{ url: string }> => {
+    const response = await apiClient.post(`/tenants/${tenantId}/impersonate`);
+    return response.data;
+  },
 };

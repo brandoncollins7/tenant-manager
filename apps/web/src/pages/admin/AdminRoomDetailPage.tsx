@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, UserPlus, UserMinus, Pencil, Plus, Mail } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, UserPlus, UserMinus, Pencil, Plus, Mail, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +10,7 @@ import { Modal } from '../../components/ui/Modal';
 import { apiClient } from '../../api/client';
 import { tenantsApi } from '../../api/tenants';
 import { extractErrorMessage } from '../../utils/errors';
+import { useAuth } from '../../context/AuthContext';
 
 interface Room {
   id: string;
@@ -53,6 +54,8 @@ export function AdminRoomDetailPage() {
   const { roomId, unitId } = useParams<{ roomId: string; unitId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [roomNumber, setRoomNumber] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -169,6 +172,19 @@ export function AdminRoomDetailPage() {
     },
     onSuccess: () => {
       toast.success('Login link sent successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: async (tenantId: string) => {
+      return tenantsApi.impersonate(tenantId);
+    },
+    onSuccess: (data) => {
+      window.open(data.url, '_blank');
+      toast.success('Opening tenant session in new tab');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -411,6 +427,17 @@ export function AdminRoomDetailPage() {
           <h2 className="text-lg font-semibold">Tenant Information</h2>
           {room.tenant ? (
             <div className="flex items-center gap-2">
+              {isSuperAdmin && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => impersonateMutation.mutate(room.tenant!.id)}
+                  disabled={impersonateMutation.isPending}
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  {impersonateMutation.isPending ? 'Loading...' : 'Impersonate'}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
