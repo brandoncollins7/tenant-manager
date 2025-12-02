@@ -11,4 +11,8 @@ module.exports = {
   verbose: true,
   // Run tests sequentially to avoid database conflicts
   maxWorkers: 1,
+  // Coverage configuration
+  collectCoverageFrom: ['src/**/*.(t|j)s', '!src/**/*.spec.ts'],
+  coverageDirectory: 'coverage/e2e',
+  coverageReporters: ['json', 'text', 'lcov'],
 };
