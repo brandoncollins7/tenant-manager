@@ -26,7 +26,7 @@ export class UnitsService {
         ? { id: { in: unitIds } }
         : {};
 
-    return this.prisma.unit.findMany({
+    const units = await this.prisma.unit.findMany({
       where,
       include: {
         rooms: {
@@ -49,6 +49,15 @@ export class UnitsService {
       },
       orderBy: { name: 'asc' },
     });
+
+    // Compute tenant counts from rooms (tenants are connected through rooms)
+    return units.map((unit) => ({
+      ...unit,
+      _count: {
+        ...unit._count,
+        tenants: unit.rooms.filter((room) => room.tenant?.isActive).length,
+      },
+    }));
   }
 
   async findOne(id: string) {

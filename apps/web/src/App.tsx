@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { usePageTracking } from './hooks/usePageTracking';
 import { MobileLayout } from './components/layout/MobileLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
+import { TasksLayout } from './components/layout/TasksLayout';
 import { DevEmailListener } from './components/dev/DevEmailListener';
 import { LoginPage } from './pages/LoginPage';
 import { VerifyPage } from './pages/VerifyPage';
@@ -12,13 +13,12 @@ import { SwapsPage } from './pages/SwapsPage';
 import { RequestsPage } from './pages/RequestsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
-import { AdminTenantsPage } from './pages/admin/AdminTenantsPage';
 import { AdminRequestsPage } from './pages/admin/AdminRequestsPage';
 import { AdminSchedulePage } from './pages/admin/AdminSchedulePage';
 import { AdminChoresPage } from './pages/admin/AdminChoresPage';
-import { AdminRoomsPage } from './pages/admin/AdminRoomsPage';
+import { AdminUnitsPage } from './pages/admin/AdminUnitsPage';
+import { AdminUnitDetailPage } from './pages/admin/AdminUnitDetailPage';
 import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
-import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -112,13 +112,18 @@ function AppRoutes() {
         }
       >
         <Route index element={<AdminDashboardPage />} />
-        <Route path="tenants" element={<AdminTenantsPage />} />
         <Route path="requests" element={<AdminRequestsPage />} />
-        <Route path="rooms" element={<AdminRoomsPage />} />
-        <Route path="rooms/:roomId" element={<AdminRoomDetailPage />} />
-        <Route path="chores" element={<AdminChoresPage />} />
-        <Route path="schedule" element={<AdminSchedulePage />} />
-        <Route path="users" element={<AdminUsersPage />} />
+
+        {/* Units routes */}
+        <Route path="units" element={<AdminUnitsPage />} />
+        <Route path="units/:unitId" element={<AdminUnitDetailPage />} />
+        <Route path="units/:unitId/rooms/:roomId" element={<AdminRoomDetailPage />} />
+
+        {/* Tasks nested routes */}
+        <Route path="tasks" element={<TasksLayout />}>
+          <Route path="chores" element={<AdminChoresPage />} />
+          <Route path="schedule" element={<AdminSchedulePage />} />
+        </Route>
       </Route>
 
       {/* Protected tenant routes */}

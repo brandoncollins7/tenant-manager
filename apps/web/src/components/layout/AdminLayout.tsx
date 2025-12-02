@@ -1,27 +1,18 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Calendar, Building, FileText, LogOut, ClipboardList, Shield } from 'lucide-react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Building2, FileText, LogOut, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const baseNavItems = [
+const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/admin/rooms', icon: Building, label: 'Rooms' },
-  { to: '/admin/tenants', icon: Users, label: 'Tenants' },
-  { to: '/admin/chores', icon: ClipboardList, label: 'Chores' },
+  { to: '/admin/units', icon: Building2, label: 'Units', matchPaths: ['/admin/units'] },
+  { to: '/admin/tasks', icon: ClipboardList, label: 'Tasks', matchPaths: ['/admin/tasks', '/admin/tasks/chores', '/admin/tasks/schedule'] },
   { to: '/admin/requests', icon: FileText, label: 'Requests' },
-  { to: '/admin/schedule', icon: Calendar, label: 'Schedule' },
-];
-
-const superAdminNavItems = [
-  { to: '/admin/users', icon: Shield, label: 'Admins', superAdminOnly: true },
 ];
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const navItems = user?.role === 'SUPER_ADMIN'
-    ? [...baseNavItems, ...superAdminNavItems]
-    : baseNavItems;
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -58,18 +49,24 @@ export function AdminLayout() {
           {navItems.map((item) => {
             const { to, icon: Icon, label } = item;
             const end = 'end' in item ? item.end : false;
+            const matchPaths = 'matchPaths' in item ? item.matchPaths : undefined;
+
+            // Custom active state: check matchPaths or use NavLink's default
+            const isCustomActive = matchPaths?.some(path => location.pathname.startsWith(path)) ?? false;
+
             return (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
-                className={({ isActive }) =>
-                  `flex flex-col items-center px-4 py-2 text-xs font-medium transition-colors ${
-                    isActive
+                className={({ isActive }) => {
+                  const active = matchPaths ? isCustomActive : isActive;
+                  return `flex flex-col items-center px-4 py-2 text-xs font-medium transition-colors ${
+                    active
                       ? 'text-primary-600'
                       : 'text-gray-500 hover:text-gray-700'
-                  }`
-                }
+                  }`;
+                }}
               >
                 <Icon className="w-6 h-6 mb-1" />
                 {label}

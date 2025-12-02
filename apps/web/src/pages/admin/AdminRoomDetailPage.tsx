@@ -50,7 +50,7 @@ interface Occupant {
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function AdminRoomDetailPage() {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { roomId, unitId } = useParams<{ roomId: string; unitId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [roomNumber, setRoomNumber] = useState('');
@@ -108,6 +108,7 @@ export function AdminRoomDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room', roomId] });
       queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId] });
       toast.success('Room updated successfully');
     },
     onError: (error) => {
@@ -121,8 +122,9 @@ export function AdminRoomDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId] });
       toast.success('Room deleted successfully');
-      navigate('/admin/rooms');
+      navigate(unitId ? `/admin/units/${unitId}` : '/admin/units');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -341,8 +343,8 @@ export function AdminRoomDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Room not found</p>
-        <Button onClick={() => navigate('/admin/rooms')} className="mt-4">
-          Back to Rooms
+        <Button onClick={() => navigate(unitId ? `/admin/units/${unitId}` : '/admin/units')} className="mt-4">
+          Back to Unit
         </Button>
       </div>
     );
@@ -356,7 +358,7 @@ export function AdminRoomDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/admin/rooms')}
+            onClick={() => navigate(unitId ? `/admin/units/${unitId}` : '/admin/units')}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

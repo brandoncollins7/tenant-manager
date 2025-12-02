@@ -134,10 +134,11 @@ export class TenantsService {
     });
   }
 
-  async getAvailableRooms() {
+  async getAvailableRooms(unitId?: string) {
     return this.prisma.room.findMany({
       where: {
         tenant: null,
+        ...(unitId && { unitId }),
       },
       include: {
         unit: true,

@@ -46,6 +46,17 @@ export class TenantsController {
     return this.tenantsService.findAll(unitId, user?.adminRole, user?.unitIds);
   }
 
+  // Static routes must come BEFORE parameterized routes
+  @Get('rooms/available')
+  getAvailableRooms(@Query('unitId') unitId?: string) {
+    return this.tenantsService.getAvailableRooms(unitId);
+  }
+
+  @Get('unassigned')
+  getUnassignedTenants() {
+    return this.tenantsService.getUnassignedTenants();
+  }
+
   @Get(':id')
   @UnitScoped('tenant')
   findOne(@Param('id') id: string) {
@@ -69,16 +80,6 @@ export class TenantsController {
   async sendLoginLink(@Param('id') id: string) {
     const tenant = await this.tenantsService.findOne(id);
     return this.authService.requestMagicLink(tenant.email);
-  }
-
-  @Get('rooms/available')
-  getAvailableRooms() {
-    return this.tenantsService.getAvailableRooms();
-  }
-
-  @Get('unassigned')
-  getUnassignedTenants() {
-    return this.tenantsService.getUnassignedTenants();
   }
 
   @Post(':id/lease')
