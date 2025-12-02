@@ -1,5 +1,6 @@
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
+import { AuthenticatedImage } from '../ui/AuthenticatedImage';
 import { Clock, CheckCircle, Camera } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { REQUEST_TYPE_LABELS } from '../../types';
@@ -63,8 +64,8 @@ export function RequestDetailModal({
               <Camera className="w-4 h-4" />
               Photo
             </h4>
-            <img
-              src={`/api/uploads/${request.photoPath}`}
+            <AuthenticatedImage
+              src={`/uploads/${request.photoPath}`}
               alt="Request photo"
               className="w-full rounded-lg"
             />

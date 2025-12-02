@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { AuthenticatedImage } from '../ui/AuthenticatedImage';
 import { requestsApi } from '../../api/requests';
 import { REQUEST_TYPE_LABELS } from '../../types';
 import { extractErrorMessage } from '../../utils/errors';
@@ -77,8 +78,8 @@ export function ResolveRequestModal({
           </p>
           {request.photoPath && (
             <div className="mt-3">
-              <img
-                src={`/api/uploads/photos/${request.photoPath}`}
+              <AuthenticatedImage
+                src={`/uploads/${request.photoPath}`}
                 alt="Request photo"
                 className="w-full rounded-lg"
               />

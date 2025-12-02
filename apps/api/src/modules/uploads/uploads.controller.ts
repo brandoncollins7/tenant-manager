@@ -20,11 +20,11 @@ import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
 @Controller('uploads')
-@UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
 
   @Post('photo')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
@@ -54,6 +54,7 @@ export class UploadsController {
   }
 
   @Get(':tenantId/:filename')
+  @UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
   @UnitScoped('photo', 'tenantId')
   async getPhoto(
     @Param('tenantId') tenantId: string,
