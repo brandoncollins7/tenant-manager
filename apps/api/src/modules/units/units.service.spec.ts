@@ -98,7 +98,21 @@ describe('UnitsService', () => {
 
       const result = await service.findAll();
 
-      expect(result).toEqual(mockUnits);
+      // Service adds computed tenants count based on active tenants in rooms
+      expect(result).toEqual([
+        {
+          id: 'unit-1',
+          name: 'Building A',
+          rooms: [{ id: 'room-1', tenant: null }],
+          _count: { rooms: 1, chores: 2, tenants: 0 },
+        },
+        {
+          id: 'unit-2',
+          name: 'Building B',
+          rooms: [],
+          _count: { rooms: 0, chores: 0, tenants: 0 },
+        },
+      ]);
       expect(prisma.unit.findMany).toHaveBeenCalledWith({
         where: {},
         include: {
