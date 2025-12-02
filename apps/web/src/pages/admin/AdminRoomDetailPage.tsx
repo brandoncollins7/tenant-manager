@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, UserPlus, UserMinus, Pencil, Plus, Mail, UserCheck } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
+import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
+import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
 import { apiClient } from '../../api/client';
 import { tenantsApi } from '../../api/tenants';
 import { extractErrorMessage } from '../../utils/errors';
@@ -23,7 +26,10 @@ interface Room {
   tenant?: {
     id: string;
     email: string;
+    phone?: string;
+    startDate: string;
     isActive: boolean;
+    leaseDocument?: string;
     occupants?: Array<{
       id: string;
       name: string;
@@ -48,7 +54,7 @@ interface Occupant {
   isActive: boolean;
 }
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
 export function AdminRoomDetailPage() {
   const { roomId, unitId } = useParams<{ roomId: string; unitId: string }>();
@@ -59,13 +65,16 @@ export function AdminRoomDetailPage() {
   const [roomNumber, setRoomNumber] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showRemoveTenantModal, setShowRemoveTenantModal] = useState(false);
   const [showOccupantModal, setShowOccupantModal] = useState(false);
   const [editingOccupant, setEditingOccupant] = useState<Occupant | null>(null);
   const [occupantForm, setOccupantForm] = useState({ name: '', choreDay: 0 });
   const [occupantToDelete, setOccupantToDelete] = useState<Occupant | null>(null);
   const [showEditTenantModal, setShowEditTenantModal] = useState(false);
-  const [tenantEmail, setTenantEmail] = useState('');
+  const [editTenantForm, setEditTenantForm] = useState({
+    email: '',
+    phone: '',
+    startDate: '',
+  });
   const [showCreateTenantForm, setShowCreateTenantForm] = useState(false);
   const [newTenantForm, setNewTenantForm] = useState({
     email: '',
@@ -74,16 +83,33 @@ export function AdminRoomDetailPage() {
     choreDay: 0,
     startDate: new Date().toISOString().split('T')[0],
   });
+  const [showDeleteTenantModal, setShowDeleteTenantModal] = useState(false);
+  const [uploadLeaseModal, setUploadLeaseModal] = useState<{
+    isOpen: boolean;
+    tenantId: string;
+    tenantName: string;
+  } | null>(null);
+  const [historyModal, setHistoryModal] = useState<{
+    isOpen: boolean;
+    tenantId: string;
+    tenantName: string;
+  } | null>(null);
 
   const { data: room, isLoading } = useQuery<Room>({
     queryKey: ['room', roomId],
     queryFn: async () => {
       const response = await apiClient.get(`/rooms/${roomId}`);
-      setRoomNumber(response.data.roomNumber);
       return response.data;
     },
     enabled: !!roomId,
   });
+
+  // Sync roomNumber state when room data changes
+  useEffect(() => {
+    if (room?.roomNumber) {
+      setRoomNumber(room.roomNumber);
+    }
+  }, [room?.roomNumber]);
 
   const { data: unassignedTenants } = useQuery<UnassignedTenant[]>({
     queryKey: ['unassigned-tenants'],
@@ -150,16 +176,17 @@ export function AdminRoomDetailPage() {
     },
   });
 
-  const removeTenantMutation = useMutation({
+  const deleteTenantMutation = useMutation({
     mutationFn: async (tenantId: string) => {
-      await apiClient.patch(`/tenants/${tenantId}`, { roomId: null });
+      await apiClient.delete(`/tenants/${tenantId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room', roomId] });
       queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId] });
       queryClient.invalidateQueries({ queryKey: ['unassigned-tenants'] });
-      setShowRemoveTenantModal(false);
-      toast.success('Tenant removed successfully');
+      setShowDeleteTenantModal(false);
+      toast.success('Tenant deleted successfully');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -241,14 +268,18 @@ export function AdminRoomDetailPage() {
   });
 
   const updateTenantMutation = useMutation({
-    mutationFn: async ({ id, email }: { id: string; email: string }) => {
-      await apiClient.patch(`/tenants/${id}`, { email });
+    mutationFn: async ({ id, data }: { id: string; data: { email: string; phone: string; startDate: string } }) => {
+      await apiClient.patch(`/tenants/${id}`, {
+        email: data.email,
+        phone: data.phone || null,
+        startDate: new Date(data.startDate).toISOString(),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room', roomId] });
       queryClient.invalidateQueries({ queryKey: ['units'] });
       setShowEditTenantModal(false);
-      toast.success('Tenant email updated successfully');
+      toast.success('Tenant updated successfully');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -316,15 +347,19 @@ export function AdminRoomDetailPage() {
 
   const handleOpenEditTenantModal = () => {
     if (room?.tenant) {
-      setTenantEmail(room.tenant.email);
+      setEditTenantForm({
+        email: room.tenant.email,
+        phone: room.tenant.phone || '',
+        startDate: room.tenant.startDate ? new Date(room.tenant.startDate).toISOString().split('T')[0] : '',
+      });
       setShowEditTenantModal(true);
     }
   };
 
   const handleSubmitTenant = (e: React.FormEvent) => {
     e.preventDefault();
-    if (room?.tenant?.id && tenantEmail !== room.tenant.email) {
-      updateTenantMutation.mutate({ id: room.tenant.id, email: tenantEmail });
+    if (room?.tenant?.id) {
+      updateTenantMutation.mutate({ id: room.tenant.id, data: editTenantForm });
     }
   };
 
@@ -422,41 +457,56 @@ export function AdminRoomDetailPage() {
       </Card>
 
       {/* Tenant Information */}
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Tenant Information</h2>
-          {room.tenant ? (
-            <div className="flex items-center gap-2">
-              {isSuperAdmin && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => impersonateMutation.mutate(room.tenant!.id)}
-                  disabled={impersonateMutation.isPending}
-                >
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  {impersonateMutation.isPending ? 'Loading...' : 'Impersonate'}
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => sendLoginLinkMutation.mutate(room.tenant!.id)}
-                disabled={sendLoginLinkMutation.isPending}
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                {sendLoginLinkMutation.isPending ? 'Sending...' : 'Resend Login Email'}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowRemoveTenantModal(true)}
-              >
-                <UserMinus className="w-4 h-4 mr-2" />
-                Remove Tenant
-              </Button>
-            </div>
-          ) : (
+      {room.tenant ? (
+        <TenantInfoCard
+          tenant={{
+            id: room.tenant.id,
+            email: room.tenant.email,
+            phone: room.tenant.phone,
+            startDate: room.tenant.startDate,
+            isActive: room.tenant.isActive,
+            leaseDocument: room.tenant.leaseDocument,
+          }}
+          occupants={occupants || []}
+          roomNumber={room.roomNumber}
+          isSuperAdmin={isSuperAdmin}
+          isPendingImpersonate={impersonateMutation.isPending}
+          isPendingResendEmail={sendLoginLinkMutation.isPending}
+          onImpersonate={() => impersonateMutation.mutate(room.tenant!.id)}
+          onResendLoginEmail={() => sendLoginLinkMutation.mutate(room.tenant!.id)}
+          onDeleteTenant={() => setShowDeleteTenantModal(true)}
+          onEditTenant={handleOpenEditTenantModal}
+          onUploadLease={() =>
+            setUploadLeaseModal({
+              isOpen: true,
+              tenantId: room.tenant!.id,
+              tenantName: room.tenant!.email,
+            })
+          }
+          onViewLeaseHistory={() =>
+            setHistoryModal({
+              isOpen: true,
+              tenantId: room.tenant!.id,
+              tenantName: room.tenant!.email,
+            })
+          }
+          onViewCurrentLease={async () => {
+            try {
+              const blob = await tenantsApi.getCurrentLeaseBlob(room.tenant!.id);
+              const url = URL.createObjectURL(blob);
+              window.open(url, '_blank');
+            } catch (error) {
+              toast.error(extractErrorMessage(error));
+            }
+          }}
+          onAddOccupant={() => handleOpenOccupantModal()}
+          onEditOccupant={(occupant) => handleOpenOccupantModal(occupant)}
+          onDeleteOccupant={(occupant) => setOccupantToDelete(occupant)}
+        />
+      ) : (
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Tenant Information</h2>
             <Button
               size="sm"
               onClick={() => setShowAssignModal(true)}
@@ -464,96 +514,9 @@ export function AdminRoomDetailPage() {
               <UserPlus className="w-4 h-4 mr-2" />
               Assign Tenant
             </Button>
-          )}
-        </CardHeader>
-        <CardBody>
-          {room.tenant ? (
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <button
-                    onClick={handleOpenEditTenantModal}
-                    className="p-1 text-gray-400 hover:text-primary-600 rounded transition-colors"
-                    title="Edit email"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <p className="text-gray-900">{room.tenant.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Status</label>
-                <p className="text-gray-900">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      room.tenant.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {room.tenant.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500">No tenant assigned to this room</p>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* Occupants Section - Only show if tenant is assigned */}
-      {room.tenant && (
-        <Card>
-          <CardHeader className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Occupants</h2>
-            <Button
-              size="sm"
-              onClick={() => handleOpenOccupantModal()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Occupant
-            </Button>
           </CardHeader>
           <CardBody>
-            {occupants && occupants.length > 0 ? (
-              <div className="space-y-2">
-                {occupants
-                  .filter((occ) => occ.isActive)
-                  .map((occupant) => (
-                    <div
-                      key={occupant.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">{occupant.name}</div>
-                        <div className="text-sm text-gray-600">
-                          Chore Day: {DAYS[occupant.choreDay]}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenOccupantModal(occupant)}
-                          className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                          title="Edit occupant"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setOccupantToDelete(occupant)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Remove occupant"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No occupants yet. Add an occupant to get started.</p>
-            )}
+            <p className="text-gray-500">No tenant assigned to this room</p>
           </CardBody>
         </Card>
       )}
@@ -716,54 +679,70 @@ export function AdminRoomDetailPage() {
         </div>
       </Modal>
 
-      {/* Remove Tenant Confirmation Modal */}
+      {/* Delete Tenant Confirmation Modal */}
       <Modal
-        isOpen={showRemoveTenantModal}
-        onClose={() => setShowRemoveTenantModal(false)}
-        title="Remove Tenant"
+        isOpen={showDeleteTenantModal}
+        onClose={() => setShowDeleteTenantModal(false)}
+        title="Delete Tenant"
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Are you sure you want to remove <strong>{room.tenant?.email}</strong> from this room?
-            The tenant will remain in the system but will be unassigned from any room.
+            Are you sure you want to delete <strong>{room.tenant?.email}</strong>?
+            This will deactivate their account.
           </p>
 
           <div className="flex gap-3">
             <Button
               variant="secondary"
-              onClick={() => setShowRemoveTenantModal(false)}
+              onClick={() => setShowDeleteTenantModal(false)}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
               variant="danger"
-              onClick={() => room.tenant && removeTenantMutation.mutate(room.tenant.id)}
+              onClick={() => room.tenant && deleteTenantMutation.mutate(room.tenant.id)}
               className="flex-1"
-              disabled={removeTenantMutation.isPending}
+              disabled={deleteTenantMutation.isPending}
             >
-              {removeTenantMutation.isPending ? 'Removing...' : 'Remove Tenant'}
+              {deleteTenantMutation.isPending ? 'Deleting...' : 'Delete Tenant'}
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Edit Tenant Email Modal */}
+      {/* Edit Tenant Modal */}
       <Modal
         isOpen={showEditTenantModal}
         onClose={() => {
           setShowEditTenantModal(false);
-          setTenantEmail('');
+          setEditTenantForm({ email: '', phone: '', startDate: '' });
         }}
-        title="Edit Tenant Email"
+        title="Edit Tenant"
       >
         <form onSubmit={handleSubmitTenant} className="space-y-4">
           <Input
             label="Email"
             type="email"
-            value={tenantEmail}
-            onChange={(e) => setTenantEmail(e.target.value)}
+            value={editTenantForm.email}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, email: e.target.value })}
             placeholder="tenant@example.com"
+            required
+          />
+
+          <Input
+            label="Phone (Optional)"
+            type="tel"
+            value={editTenantForm.phone}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
+            placeholder="+1234567890"
+          />
+
+          <Input
+            label="Start Date"
+            type="date"
+            value={editTenantForm.startDate}
+            onChange={(e) => setEditTenantForm({ ...editTenantForm, startDate: e.target.value })}
             required
           />
 
@@ -773,7 +752,7 @@ export function AdminRoomDetailPage() {
               variant="secondary"
               onClick={() => {
                 setShowEditTenantModal(false);
-                setTenantEmail('');
+                setEditTenantForm({ email: '', phone: '', startDate: '' });
               }}
               className="flex-1"
             >
@@ -782,9 +761,9 @@ export function AdminRoomDetailPage() {
             <Button
               type="submit"
               className="flex-1"
-              disabled={updateTenantMutation.isPending || !tenantEmail || tenantEmail === room.tenant?.email}
+              disabled={updateTenantMutation.isPending || !editTenantForm.email || !editTenantForm.startDate}
             >
-              {updateTenantMutation.isPending ? 'Updating...' : 'Update Email'}
+              {updateTenantMutation.isPending ? 'Updating...' : 'Update Tenant'}
             </Button>
           </div>
         </form>
@@ -883,6 +862,26 @@ export function AdminRoomDetailPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Upload Lease Modal */}
+      {uploadLeaseModal && (
+        <UploadLeaseModal
+          isOpen={uploadLeaseModal.isOpen}
+          onClose={() => setUploadLeaseModal(null)}
+          tenantId={uploadLeaseModal.tenantId}
+          tenantName={uploadLeaseModal.tenantName}
+        />
+      )}
+
+      {/* Lease History Modal */}
+      {historyModal && (
+        <LeaseHistoryModal
+          isOpen={historyModal.isOpen}
+          onClose={() => setHistoryModal(null)}
+          tenantId={historyModal.tenantId}
+          tenantName={historyModal.tenantName}
+        />
+      )}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Clock } from 'lucide-react';
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { choresApi } from '../api/chores';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { DAYS_OF_WEEK } from '../types';
+import { CompletionModal } from '../components/chores/CompletionModal';
+import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
 
 function getWeekId(date: Date): string {
   const d = new Date(date);
@@ -25,6 +26,7 @@ function getWeekId(date: Date): string {
 export function ChoresPage() {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedCompletion, setSelectedCompletion] = useState<ChoreCompletion | null>(null);
   const weekId = getWeekId(currentDate);
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const unitId = user?.room?.unit?.id;
@@ -127,29 +129,68 @@ export function ChoresPage() {
                   </div>
 
                   <div className="space-y-2">
-                    {completions.map((completion) => (
-                      <div
-                        key={completion.id}
-                        className="flex items-center justify-between py-2 border-t border-gray-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span>{completion.chore.icon || '📋'}</span>
-                          <span className="text-sm">{completion.chore.name}</span>
-                        </div>
-                        <Badge
-                          size="sm"
-                          variant={
-                            completion.status === 'COMPLETED'
-                              ? 'success'
-                              : completion.status === 'MISSED'
-                              ? 'danger'
-                              : 'warning'
-                          }
+                    {completions.map((completion) => {
+                      const isOwnChore = user?.occupants?.some(
+                        (o) => o.id === completion.occupant.id
+                      );
+                      const canComplete = isOwnChore && completion.status === 'PENDING';
+
+                      return (
+                        <div
+                          key={completion.id}
+                          className="py-2 border-t border-gray-100"
                         >
-                          {completion.status}
-                        </Badge>
-                      </div>
-                    ))}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span>{completion.chore.icon || '📋'}</span>
+                              <span className="text-sm">{completion.chore.name}</span>
+                            </div>
+                            <Badge
+                              size="sm"
+                              variant={
+                                completion.status === 'COMPLETED'
+                                  ? 'success'
+                                  : completion.status === 'MISSED'
+                                  ? 'danger'
+                                  : 'warning'
+                              }
+                            >
+                              {completion.status}
+                            </Badge>
+                          </div>
+
+                          {canComplete && (
+                            <button
+                              onClick={() => setSelectedCompletion(completion as ChoreCompletion)}
+                              className="mt-2 w-full flex items-center justify-center gap-2 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 active:bg-green-800"
+                            >
+                              <Check className="w-4 h-4" />
+                              Mark Complete
+                            </button>
+                          )}
+
+                          {completion.status === 'COMPLETED' && completion.completedAt && (
+                            <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                              <Check className="w-3 h-3" />
+                              <span>
+                                Completed{' '}
+                                {new Date(completion.completedAt).toLocaleTimeString([], {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                          )}
+
+                          {completion.status === 'MISSED' && (
+                            <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                              <Clock className="w-3 h-3" />
+                              <span>Not completed</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardBody>
               </Card>
@@ -157,6 +198,12 @@ export function ChoresPage() {
           })}
         </div>
       )}
+
+      {/* Completion Modal */}
+      <CompletionModal
+        completion={selectedCompletion}
+        onClose={() => setSelectedCompletion(null)}
+      />
     </div>
   );
 }
