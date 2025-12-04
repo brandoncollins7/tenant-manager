@@ -123,4 +123,72 @@ export class AdminsService {
 
     return this.prisma.admin.delete({ where: { id } });
   }
+
+  async findByUnit(unitId: string, currentAdminRole: string) {
+    if (currentAdminRole !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    return this.prisma.admin.findMany({
+      where: {
+        unitAssignments: {
+          some: { unitId },
+        },
+      },
+      include: {
+        unitAssignments: { include: { unit: true } },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async findAvailableForUnit(unitId: string, currentAdminRole: string) {
+    if (currentAdminRole !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    // Return property managers not already assigned to this unit
+    return this.prisma.admin.findMany({
+      where: {
+        role: AdminRole.PROPERTY_MANAGER,
+        unitAssignments: {
+          none: { unitId },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async assignToUnit(adminId: string, unitId: string, currentAdminRole: string) {
+    if (currentAdminRole !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    // Check if already assigned
+    const existing = await this.prisma.adminUnitAssignment.findFirst({
+      where: { adminId, unitId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.prisma.adminUnitAssignment.create({
+      data: { adminId, unitId },
+      include: {
+        admin: true,
+        unit: true,
+      },
+    });
+  }
+
+  async removeFromUnit(adminId: string, unitId: string, currentAdminRole: string) {
+    if (currentAdminRole !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin access required');
+    }
+
+    return this.prisma.adminUnitAssignment.deleteMany({
+      where: { adminId, unitId },
+    });
+  }
 }

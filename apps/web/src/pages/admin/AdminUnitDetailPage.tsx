@@ -7,6 +7,9 @@ import {
   Trash2,
   DoorOpen,
   Users,
+  Shield,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardBody } from '../../components/ui/Card';
@@ -18,11 +21,13 @@ import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
 import { apiClient } from '../../api/client';
 import { tenantsApi } from '../../api/tenants';
+import { adminsApi } from '../../api/admins';
 import { DAYS_OF_WEEK } from '../../types';
+import type { Admin } from '../../types';
 import { extractErrorMessage } from '../../utils/errors';
 import { useAuth } from '../../context/AuthContext';
 
-type TabType = 'tenants' | 'rooms';
+type TabType = 'tenants' | 'rooms' | 'managers';
 
 interface Occupant {
   id: string;
@@ -112,6 +117,10 @@ export function AdminUnitDetailPage() {
   const [roomForm, setRoomForm] = useState({ roomNumber: '' });
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
+  // Manager-related state
+  const [isAssignManagerModalOpen, setIsAssignManagerModalOpen] = useState(false);
+  const [managerToRemove, setManagerToRemove] = useState<Admin | null>(null);
+
   // Add tenant form state
   const [tenantForm, setTenantForm] = useState({
     email: '',
@@ -151,6 +160,20 @@ export function AdminUnitDetailPage() {
       return response.data;
     },
     enabled: !!unitId && isAddTenantModalOpen,
+  });
+
+  // Fetch managers assigned to this unit (super admin only)
+  const { data: managers, isLoading: managersLoading } = useQuery<Admin[]>({
+    queryKey: ['unit', unitId, 'managers'],
+    queryFn: () => adminsApi.getByUnit(unitId!),
+    enabled: !!unitId && isSuperAdmin,
+  });
+
+  // Fetch available managers to assign (super admin only)
+  const { data: availableManagers } = useQuery<Admin[]>({
+    queryKey: ['unit', unitId, 'available-managers'],
+    queryFn: () => adminsApi.getAvailableForUnit(unitId!),
+    enabled: !!unitId && isSuperAdmin && isAssignManagerModalOpen,
   });
 
   // Mutations
@@ -309,6 +332,36 @@ export function AdminUnitDetailPage() {
     },
   });
 
+  const assignManagerMutation = useMutation({
+    mutationFn: async (adminId: string) => {
+      await adminsApi.assignToUnit(adminId, unitId!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'managers'] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'available-managers'] });
+      setIsAssignManagerModalOpen(false);
+      toast.success('Manager assigned successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const removeManagerMutation = useMutation({
+    mutationFn: async (adminId: string) => {
+      await adminsApi.removeFromUnit(adminId, unitId!);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'managers'] });
+      queryClient.invalidateQueries({ queryKey: ['unit', unitId, 'available-managers'] });
+      setManagerToRemove(null);
+      toast.success('Manager removed from unit');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
   // Handlers
   const handleEditOccupant = (occupant: Occupant) => {
     setOccupantToEdit(occupant);
@@ -436,6 +489,19 @@ export function AdminUnitDetailPage() {
           <DoorOpen className="w-4 h-4" />
           Rooms ({unit.rooms.length})
         </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => setActiveTab('managers')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${
+              activeTab === 'managers'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Managers
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -581,6 +647,62 @@ export function AdminUnitDetailPage() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'managers' && isSuperAdmin && (
+        <div className="space-y-4">
+          {/* Assign Manager Button */}
+          <div className="flex justify-end">
+            <Button onClick={() => setIsAssignManagerModalOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              Assign Manager
+            </Button>
+          </div>
+
+          {/* Managers List */}
+          {managersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+            </div>
+          ) : managers?.length === 0 ? (
+            <Card>
+              <CardBody className="text-center py-8">
+                <Shield className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-600">No managers assigned to this unit.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Assign property managers to give them access to this unit.
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
+            <div className="grid gap-3">
+              {managers?.map((manager) => (
+                <Card key={manager.id}>
+                  <CardBody className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-50 rounded-lg">
+                          <Shield className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{manager.name}</h3>
+                          <p className="text-sm text-gray-500">{manager.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setManagerToRemove(manager)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Remove manager from unit"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </CardBody>
                 </Card>
@@ -1028,6 +1150,93 @@ export function AdminUnitDetailPage() {
               disabled={deleteRoomMutation.isPending}
             >
               {deleteRoomMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Assign Manager Modal */}
+      <Modal
+        isOpen={isAssignManagerModalOpen}
+        onClose={() => setIsAssignManagerModalOpen(false)}
+        title="Assign Manager"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Select a property manager to assign to this unit.
+          </p>
+
+          {availableManagers?.length === 0 ? (
+            <div className="text-center py-6">
+              <Shield className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-500">No available managers to assign.</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Create new property managers from the Users page.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {availableManagers?.map((manager) => (
+                <button
+                  key={manager.id}
+                  onClick={() => assignManagerMutation.mutate(manager.id)}
+                  disabled={assignManagerMutation.isPending}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-primary-300 transition-colors text-left disabled:opacity-50"
+                >
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Shield className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{manager.name}</div>
+                    <div className="text-sm text-gray-500">{manager.email}</div>
+                  </div>
+                  <UserPlus className="w-4 h-4 text-gray-400" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsAssignManagerModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Remove Manager Confirmation */}
+      <Modal
+        isOpen={!!managerToRemove}
+        onClose={() => setManagerToRemove(null)}
+        title="Remove Manager"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to remove{' '}
+            <strong>{managerToRemove?.name}</strong> from this unit?
+          </p>
+          <p className="text-sm text-gray-500">
+            They will no longer have access to manage this unit.
+          </p>
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setManagerToRemove(null)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => managerToRemove && removeManagerMutation.mutate(managerToRemove.id)}
+              className="flex-1"
+              disabled={removeManagerMutation.isPending}
+            >
+              {removeManagerMutation.isPending ? 'Removing...' : 'Remove'}
             </Button>
           </div>
         </div>

@@ -33,6 +33,21 @@ export class AdminsController {
     return this.adminsService.findAll(user.adminRole!);
   }
 
+  @Get('by-unit/:unitId')
+  @UseGuards(SuperAdminGuard)
+  findByUnit(@Param('unitId') unitId: string, @CurrentUser() user: JwtPayload) {
+    return this.adminsService.findByUnit(unitId, user.adminRole!);
+  }
+
+  @Get('available-for-unit/:unitId')
+  @UseGuards(SuperAdminGuard)
+  findAvailableForUnit(
+    @Param('unitId') unitId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.adminsService.findAvailableForUnit(unitId, user.adminRole!);
+  }
+
   @Patch(':id')
   @UseGuards(SuperAdminGuard)
   update(
@@ -41,6 +56,26 @@ export class AdminsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.adminsService.update(id, dto, user.adminRole!);
+  }
+
+  @Post(':adminId/assign-unit/:unitId')
+  @UseGuards(SuperAdminGuard)
+  assignToUnit(
+    @Param('adminId') adminId: string,
+    @Param('unitId') unitId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.adminsService.assignToUnit(adminId, unitId, user.adminRole!);
+  }
+
+  @Delete(':adminId/unassign-unit/:unitId')
+  @UseGuards(SuperAdminGuard)
+  removeFromUnit(
+    @Param('adminId') adminId: string,
+    @Param('unitId') unitId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.adminsService.removeFromUnit(adminId, unitId, user.adminRole!);
   }
 
   @Delete(':id')
