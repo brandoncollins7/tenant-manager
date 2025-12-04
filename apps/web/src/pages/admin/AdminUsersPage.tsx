@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Mail, Shield, Building, Trash2, Pencil } from 'lucide-react';
+import { Plus, Mail, Shield, Building, Trash2, Pencil, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -36,6 +36,17 @@ export function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
       setAdminToDelete(null);
       toast.success('Admin deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
+
+  const impersonateMutation = useMutation({
+    mutationFn: adminsApi.impersonate,
+    onSuccess: (data) => {
+      window.open(data.url, '_blank');
+      toast.success('Opening admin session in new tab');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -139,6 +150,14 @@ export function AdminUsersPage() {
                 </div>
 
                 <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => impersonateMutation.mutate(admin.id)}
+                    disabled={impersonateMutation.isPending}
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="Impersonate admin"
+                  >
+                    <UserCog className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleEditAdmin(admin)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

@@ -14,12 +14,15 @@ import { UpdateAdminDto } from './dto/update-admin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtPayload } from '../auth/auth.service';
+import { AuthService, JwtPayload } from '../auth/auth.service';
 
 @Controller('admins')
 @UseGuards(JwtAuthGuard)
 export class AdminsController {
-  constructor(private readonly adminsService: AdminsService) {}
+  constructor(
+    private readonly adminsService: AdminsService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post()
   @UseGuards(SuperAdminGuard)
@@ -46,6 +49,12 @@ export class AdminsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.adminsService.findAvailableForUnit(unitId, user.adminRole!);
+  }
+
+  @Post(':id/impersonate')
+  @UseGuards(SuperAdminGuard)
+  impersonate(@Param('id') id: string) {
+    return this.authService.createAdminImpersonationLink(id);
   }
 
   @Patch(':id')

@@ -305,6 +305,32 @@ export class AuthService {
     return { url: `${frontendUrl}/verify?token=${token}` };
   }
 
+  async createAdminImpersonationLink(adminId: string): Promise<{ url: string }> {
+    const admin = await this.prisma.admin.findUnique({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store admin magic link
+    await this.prisma.adminMagicLink.create({
+      data: {
+        token,
+        expiresAt,
+        adminId: admin.id,
+      },
+    });
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    return { url: `${frontendUrl}/verify?token=${token}` };
+  }
+
   async getLatestMagicLink(email: string) {
     const normalizedEmail = email.toLowerCase().trim();
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');

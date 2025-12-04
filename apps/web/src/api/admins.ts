@@ -49,6 +49,11 @@ export const adminsApi = {
     await apiClient.delete(`/admins/${adminId}/unassign-unit/${unitId}`);
   },
 
+  impersonate: async (id: string): Promise<{ url: string }> => {
+    const { data } = await apiClient.post(`/admins/${id}/impersonate`);
+    return data;
+  },
+
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/admins/${id}`);
   },
