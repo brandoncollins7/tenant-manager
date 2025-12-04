@@ -217,6 +217,7 @@ MAX_FILE_SIZE=5242880
 
 ## Development Notes
 
+- Vite has hot module reload (HMR) - no need to restart the dev server when making code changes
 - Vite proxies `/api` requests to the NestJS backend (configured in `vite.config.ts`)
 - Admin users have `isAdmin: true` in JWT payload
 - Chore days are 0-6 (Sunday-Saturday)

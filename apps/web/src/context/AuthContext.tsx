@@ -17,6 +17,7 @@ interface AuthContextType {
   selectedOccupant: Occupant | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  clearSession: () => void;
   selectOccupant: (occupant: Occupant) => void;
   refreshUser: () => Promise<void>;
 }
@@ -30,7 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     // Skip auto-refresh on verify page - let the magic link verification handle it
-    if (window.location.pathname === '/verify') {
+    // Use startsWith to handle edge cases like trailing slashes
+    if (window.location.pathname.startsWith('/verify')) {
       setIsLoading(false);
       return;
     }
@@ -112,6 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSelectedOccupant(null);
   }, []);
 
+  // Clear session without analytics - used for impersonation/verification
+  const clearSession = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('selectedOccupantId');
+    setUser(null);
+    setSelectedOccupant(null);
+  }, []);
+
   const selectOccupant = useCallback((occupant: Occupant) => {
     setSelectedOccupant(occupant);
     localStorage.setItem('selectedOccupantId', occupant.id);
@@ -133,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         selectedOccupant,
         login,
         logout,
+        clearSession,
         selectOccupant,
         refreshUser,
       }}

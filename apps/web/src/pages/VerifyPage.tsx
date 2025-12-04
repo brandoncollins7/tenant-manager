@@ -11,7 +11,7 @@ import { extractErrorMessage } from '../utils/errors';
 export function VerifyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login, logout } = useAuth();
+  const { login, clearSession } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isCleared, setIsCleared] = useState(false);
   const hasAttemptedVerification = useRef(false);
@@ -22,13 +22,10 @@ export function VerifyPage() {
   // This is important for impersonation where a new tab opens with an existing session
   // Use useLayoutEffect to ensure it runs synchronously before paint
   useLayoutEffect(() => {
-    // Clear localStorage immediately
-    localStorage.removeItem('token');
-    localStorage.removeItem('selectedOccupantId');
-    // Clear auth state
-    logout();
+    // Clear auth state (also clears localStorage)
+    clearSession();
     setIsCleared(true);
-  }, [logout]);
+  }, [clearSession]);
 
   const mutation = useMutation({
     mutationFn: authApi.verifyMagicLink,
@@ -44,13 +41,29 @@ export function VerifyPage() {
     },
   });
 
+  // Extract mutate function for stable reference in useEffect
+  const { mutate } = mutation;
+
   useEffect(() => {
     // Only verify after session is cleared and we haven't tried yet
     if (token && isCleared && !hasAttemptedVerification.current) {
       hasAttemptedVerification.current = true;
-      mutation.mutate(token);
+      // Small delay to ensure auth state clearing has fully propagated
+      // This fixes a race condition in production where verification
+      // could start before clearSession() state updates are committed
+      const timer = setTimeout(() => {
+        // Double-check localStorage is actually cleared before making request
+        const existingToken = localStorage.getItem('token');
+        if (existingToken) {
+          // Force clear if somehow still present
+          localStorage.removeItem('token');
+          localStorage.removeItem('selectedOccupantId');
+        }
+        mutate(token);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [token, isCleared]);
+  }, [token, isCleared, mutate]);
 
   if (!token) {
     return (
