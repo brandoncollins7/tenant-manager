@@ -9,6 +9,7 @@ import {
   FileText,
   Plus,
   UserCheck,
+  UserMinus,
 } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -35,7 +36,8 @@ interface TenantInfoCardProps {
   // Action callbacks
   onImpersonate?: () => void;
   onResendLoginEmail: () => void;
-  onDeleteTenant: () => void;
+  onDeleteTenant?: () => void;
+  onRemoveFromRoom?: () => void;
   onEditTenant: () => void;
   onUploadLease: () => void;
   onViewLeaseHistory: () => void;
@@ -48,6 +50,7 @@ interface TenantInfoCardProps {
   isSuperAdmin?: boolean;
   isPendingImpersonate?: boolean;
   isPendingResendEmail?: boolean;
+  isPendingRemove?: boolean;
 }
 
 export function TenantInfoCard({
@@ -57,6 +60,7 @@ export function TenantInfoCard({
   onImpersonate,
   onResendLoginEmail,
   onDeleteTenant,
+  onRemoveFromRoom,
   onEditTenant,
   onUploadLease,
   onViewLeaseHistory,
@@ -67,6 +71,7 @@ export function TenantInfoCard({
   isSuperAdmin = false,
   isPendingImpersonate = false,
   isPendingResendEmail = false,
+  isPendingRemove = false,
 }: TenantInfoCardProps) {
   const activeOccupants = occupants.filter((occ) => occ.isActive);
 
@@ -110,14 +115,27 @@ export function TenantInfoCard({
             <Mail className="w-4 h-4 mr-2" />
             {isPendingResendEmail ? 'Sending...' : 'Resend Login Email'}
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={onDeleteTenant}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Tenant
-          </Button>
+          {onRemoveFromRoom && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onRemoveFromRoom}
+              disabled={isPendingRemove}
+            >
+              <UserMinus className="w-4 h-4 mr-2" />
+              {isPendingRemove ? 'Removing...' : 'Remove from Room'}
+            </Button>
+          )}
+          {onDeleteTenant && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={onDeleteTenant}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Tenant
+            </Button>
+          )}
         </div>
       </CardHeader>
 

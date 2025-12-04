@@ -83,7 +83,7 @@ export function AdminRoomDetailPage() {
     choreDay: 0,
     startDate: new Date().toISOString().split('T')[0],
   });
-  const [showDeleteTenantModal, setShowDeleteTenantModal] = useState(false);
+  const [showRemoveTenantModal, setShowRemoveTenantModal] = useState(false);
   const [uploadLeaseModal, setUploadLeaseModal] = useState<{
     isOpen: boolean;
     tenantId: string;
@@ -176,17 +176,17 @@ export function AdminRoomDetailPage() {
     },
   });
 
-  const deleteTenantMutation = useMutation({
+  const removeTenantFromRoomMutation = useMutation({
     mutationFn: async (tenantId: string) => {
-      await apiClient.delete(`/tenants/${tenantId}`);
+      await apiClient.patch(`/tenants/${tenantId}`, { roomId: null });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room', roomId] });
       queryClient.invalidateQueries({ queryKey: ['units'] });
       queryClient.invalidateQueries({ queryKey: ['unit', unitId] });
       queryClient.invalidateQueries({ queryKey: ['unassigned-tenants'] });
-      setShowDeleteTenantModal(false);
-      toast.success('Tenant deleted successfully');
+      setShowRemoveTenantModal(false);
+      toast.success('Tenant removed from room');
     },
     onError: (error) => {
       toast.error(extractErrorMessage(error));
@@ -474,7 +474,8 @@ export function AdminRoomDetailPage() {
           isPendingResendEmail={sendLoginLinkMutation.isPending}
           onImpersonate={() => impersonateMutation.mutate(room.tenant!.id)}
           onResendLoginEmail={() => sendLoginLinkMutation.mutate(room.tenant!.id)}
-          onDeleteTenant={() => setShowDeleteTenantModal(true)}
+          onRemoveFromRoom={() => setShowRemoveTenantModal(true)}
+          isPendingRemove={removeTenantFromRoomMutation.isPending}
           onEditTenant={handleOpenEditTenantModal}
           onUploadLease={() =>
             setUploadLeaseModal({
@@ -679,33 +680,33 @@ export function AdminRoomDetailPage() {
         </div>
       </Modal>
 
-      {/* Delete Tenant Confirmation Modal */}
+      {/* Remove Tenant from Room Confirmation Modal */}
       <Modal
-        isOpen={showDeleteTenantModal}
-        onClose={() => setShowDeleteTenantModal(false)}
-        title="Delete Tenant"
+        isOpen={showRemoveTenantModal}
+        onClose={() => setShowRemoveTenantModal(false)}
+        title="Remove Tenant from Room"
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Are you sure you want to delete <strong>{room.tenant?.email}</strong>?
-            This will deactivate their account.
+            Are you sure you want to remove <strong>{room.tenant?.email}</strong> from this room?
+            The tenant will remain in the system and can be reassigned to another room.
           </p>
 
           <div className="flex gap-3">
             <Button
               variant="secondary"
-              onClick={() => setShowDeleteTenantModal(false)}
+              onClick={() => setShowRemoveTenantModal(false)}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
               variant="danger"
-              onClick={() => room.tenant && deleteTenantMutation.mutate(room.tenant.id)}
+              onClick={() => room.tenant && removeTenantFromRoomMutation.mutate(room.tenant.id)}
               className="flex-1"
-              disabled={deleteTenantMutation.isPending}
+              disabled={removeTenantFromRoomMutation.isPending}
             >
-              {deleteTenantMutation.isPending ? 'Deleting...' : 'Delete Tenant'}
+              {removeTenantFromRoomMutation.isPending ? 'Removing...' : 'Remove from Room'}
             </Button>
           </div>
         </div>
