@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -13,19 +13,9 @@ export function VerifyPage() {
   const navigate = useNavigate();
   const { login, clearSession } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [isCleared, setIsCleared] = useState(false);
   const hasAttemptedVerification = useRef(false);
 
   const token = searchParams.get('token');
-
-  // Clear any existing session BEFORE verification
-  // This is important for impersonation where a new tab opens with an existing session
-  // Use useLayoutEffect to ensure it runs synchronously before paint
-  useLayoutEffect(() => {
-    // Clear auth state (also clears localStorage)
-    clearSession();
-    setIsCleared(true);
-  }, [clearSession]);
 
   const mutation = useMutation({
     mutationFn: authApi.verifyMagicLink,
@@ -45,25 +35,19 @@ export function VerifyPage() {
   const { mutate } = mutation;
 
   useEffect(() => {
-    // Only verify after session is cleared and we haven't tried yet
-    if (token && isCleared && !hasAttemptedVerification.current) {
+    if (token && !hasAttemptedVerification.current) {
       hasAttemptedVerification.current = true;
-      // Small delay to ensure auth state clearing has fully propagated
-      // This fixes a race condition in production where verification
-      // could start before clearSession() state updates are committed
-      const timer = setTimeout(() => {
-        // Double-check localStorage is actually cleared before making request
-        const existingToken = localStorage.getItem('token');
-        if (existingToken) {
-          // Force clear if somehow still present
-          localStorage.removeItem('token');
-          localStorage.removeItem('selectedOccupantId');
-        }
-        mutate(token);
-      }, 100);
-      return () => clearTimeout(timer);
+
+      // Clear any existing session synchronously before verification
+      // This is critical for impersonation where a new tab opens with existing session
+      localStorage.removeItem('token');
+      localStorage.removeItem('selectedOccupantId');
+      clearSession();
+
+      // Call verification immediately - localStorage is already cleared
+      mutate(token);
     }
-  }, [token, isCleared, mutate]);
+  }, [token, mutate, clearSession]);
 
   if (!token) {
     return (
