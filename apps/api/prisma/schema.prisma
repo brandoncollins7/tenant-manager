@@ -73,7 +73,7 @@ model Occupant {
   updatedAt DateTime @updatedAt
   tenantId  String
   name      String
-  choreDay  Int // 0=Sunday, 6=Saturday
+  choreDay  Int? // 0=Sunday, 6=Saturday (null = not assigned)
   isActive  Boolean  @default(true)
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)

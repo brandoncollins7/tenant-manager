@@ -135,7 +135,7 @@ export class AuthService {
     tenant: {
       id: string;
       email: string;
-      occupants: { id: string; name: string; choreDay: number; isActive: boolean }[];
+      occupants: { id: string; name: string; choreDay: number | null; isActive: boolean }[];
       room: { id: string; roomNumber: string; unit: { id: string; name: string } } | null;
     };
   }) {

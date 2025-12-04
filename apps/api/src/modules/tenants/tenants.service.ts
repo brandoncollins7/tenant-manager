@@ -18,7 +18,7 @@ export class TenantsService {
         occupants: {
           create: {
             name: dto.primaryOccupantName,
-            choreDay: dto.choreDay,
+            choreDay: dto.choreDay ?? null,
           },
         },
       },

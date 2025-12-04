@@ -128,7 +128,7 @@ export function AdminUnitDetailPage() {
     roomId: '',
     startDate: new Date().toISOString().split('T')[0],
     primaryOccupantName: '',
-    choreDay: 1,
+    choreDay: '' as string | number, // empty string = not assigned
   });
   const [tenantFormErrors, setTenantFormErrors] = useState<Record<string, string>>({});
 
@@ -180,8 +180,12 @@ export function AdminUnitDetailPage() {
   const createTenantMutation = useMutation({
     mutationFn: async (data: typeof tenantForm) => {
       const response = await apiClient.post('/tenants', {
-        ...data,
+        email: data.email,
+        phone: data.phone || undefined,
+        roomId: data.roomId || undefined,
         startDate: new Date(data.startDate).toISOString(),
+        primaryOccupantName: data.primaryOccupantName,
+        choreDay: data.choreDay === '' ? undefined : data.choreDay,
       });
       return response.data;
     },
@@ -386,7 +390,7 @@ export function AdminUnitDetailPage() {
       roomId: '',
       startDate: new Date().toISOString().split('T')[0],
       primaryOccupantName: '',
-      choreDay: 1,
+      choreDay: '',
     });
     setTenantFormErrors({});
   };
@@ -400,9 +404,7 @@ export function AdminUnitDetailPage() {
       errors.email = 'Invalid email address';
     }
 
-    if (!tenantForm.roomId) {
-      errors.roomId = 'Room is required';
-    }
+    // roomId is optional - tenants can be created without a room assignment
 
     if (!tenantForm.startDate) {
       errors.startDate = 'Start date is required';
@@ -738,27 +740,22 @@ export function AdminUnitDetailPage() {
 
           <div className="w-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Room
+              Room (optional)
             </label>
             <select
               value={tenantForm.roomId}
               onChange={(e) => setTenantForm({ ...tenantForm, roomId: e.target.value })}
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base ${
-                tenantFormErrors.roomId ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
             >
-              <option value="">Select a room...</option>
+              <option value="">No room assigned</option>
               {availableRooms?.map((room) => (
                 <option key={room.id} value={room.id}>
                   Room {room.roomNumber}
                 </option>
               ))}
             </select>
-            {tenantFormErrors.roomId && (
-              <p className="mt-1 text-sm text-red-600">{tenantFormErrors.roomId}</p>
-            )}
             {availableRooms?.length === 0 && (
-              <p className="mt-1 text-sm text-amber-600">No available rooms in this unit</p>
+              <p className="mt-1 text-sm text-gray-500">No available rooms in this unit</p>
             )}
           </div>
 
@@ -780,13 +777,14 @@ export function AdminUnitDetailPage() {
 
           <div className="w-full">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Chore Day
+              Chore Day (optional)
             </label>
             <select
               value={tenantForm.choreDay}
-              onChange={(e) => setTenantForm({ ...tenantForm, choreDay: parseInt(e.target.value) })}
+              onChange={(e) => setTenantForm({ ...tenantForm, choreDay: e.target.value === '' ? '' : parseInt(e.target.value) })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
             >
+              <option value="">Not assigned</option>
               {DAYS_OF_WEEK.map((day, index) => (
                 <option key={index} value={index}>
                   {day}

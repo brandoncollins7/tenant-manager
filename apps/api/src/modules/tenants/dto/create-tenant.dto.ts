@@ -37,5 +37,6 @@ export class CreateTenantDto {
   @IsInt()
   @Min(0)
   @Max(6)
-  choreDay: number;
+  @IsOptional()
+  choreDay?: number;
 }

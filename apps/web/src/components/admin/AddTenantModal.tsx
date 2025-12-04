@@ -27,7 +27,7 @@ interface FormData {
   roomId: string;
   startDate: string;
   primaryOccupantName: string;
-  choreDay: number;
+  choreDay: number | '';
 }
 
 export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
@@ -38,7 +38,7 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
     roomId: '',
     startDate: new Date().toISOString().split('T')[0],
     primaryOccupantName: '',
-    choreDay: 1,
+    choreDay: '',
   });
   const [leaseFile, setLeaseFile] = useState<File | null>(null);
   const [leaseNotes, setLeaseNotes] = useState('');
@@ -56,8 +56,12 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
   const createTenantMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const response = await apiClient.post('/tenants', {
-        ...data,
+        email: data.email,
+        phone: data.phone || undefined,
+        roomId: data.roomId || undefined,
         startDate: new Date(data.startDate).toISOString(),
+        primaryOccupantName: data.primaryOccupantName,
+        choreDay: data.choreDay === '' ? undefined : data.choreDay,
       });
       return response.data;
     },
@@ -85,7 +89,7 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
       roomId: '',
       startDate: new Date().toISOString().split('T')[0],
       primaryOccupantName: '',
-      choreDay: 1,
+      choreDay: '',
     });
     setLeaseFile(null);
     setLeaseNotes('');
@@ -102,9 +106,7 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
       newErrors.email = 'Invalid email address';
     }
 
-    if (!formData.roomId) {
-      newErrors.roomId = 'Room is required';
-    }
+    // roomId is optional - tenants can be created without a room assignment
 
     if (!formData.startDate) {
       newErrors.startDate = 'Start date is required';
@@ -162,26 +164,23 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
 
         <div className="w-full">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Room
+            Room (optional)
           </label>
           <select
             value={formData.roomId}
             onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
-            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base ${
-              errors.roomId ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
             disabled={roomsLoading}
           >
-            <option value="">Select a room...</option>
+            <option value="">No room assigned</option>
             {availableRooms?.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.unit.name} - Room {room.roomNumber}
               </option>
             ))}
           </select>
-          {errors.roomId && <p className="mt-1 text-sm text-red-600">{errors.roomId}</p>}
           {availableRooms?.length === 0 && !roomsLoading && (
-            <p className="mt-1 text-sm text-amber-600">No available rooms</p>
+            <p className="mt-1 text-sm text-gray-500">No available rooms</p>
           )}
         </div>
 
@@ -203,13 +202,14 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
 
         <div className="w-full">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chore Day
+            Chore Day (optional)
           </label>
           <select
             value={formData.choreDay}
-            onChange={(e) => setFormData({ ...formData, choreDay: parseInt(e.target.value) })}
+            onChange={(e) => setFormData({ ...formData, choreDay: e.target.value === '' ? '' : parseInt(e.target.value) })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
           >
+            <option value="">Not assigned</option>
             {DAYS_OF_WEEK.map((day, index) => (
               <option key={index} value={index}>
                 {day}
