@@ -11,7 +11,7 @@ import { extractErrorMessage } from '../utils/errors';
 export function VerifyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const hasAttemptedVerification = useRef(false);
   const hasCleared = useRef(false);
@@ -20,10 +20,11 @@ export function VerifyPage() {
 
   // Clear any existing session synchronously on first render
   // This is important for impersonation where a new tab opens with an existing session
+  // We need to clear both localStorage AND the auth context state
   if (!hasCleared.current) {
     hasCleared.current = true;
-    localStorage.removeItem('token');
-    localStorage.removeItem('selectedOccupantId');
+    // Clear auth state - this will also clear localStorage
+    logout();
   }
 
   const mutation = useMutation({
