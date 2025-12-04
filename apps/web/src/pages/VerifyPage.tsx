@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
@@ -13,19 +13,22 @@ export function VerifyPage() {
   const navigate = useNavigate();
   const { login, logout } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [isCleared, setIsCleared] = useState(false);
   const hasAttemptedVerification = useRef(false);
-  const hasCleared = useRef(false);
 
   const token = searchParams.get('token');
 
-  // Clear any existing session synchronously on first render
+  // Clear any existing session BEFORE verification
   // This is important for impersonation where a new tab opens with an existing session
-  // We need to clear both localStorage AND the auth context state
-  if (!hasCleared.current) {
-    hasCleared.current = true;
-    // Clear auth state - this will also clear localStorage
+  // Use useLayoutEffect to ensure it runs synchronously before paint
+  useLayoutEffect(() => {
+    // Clear localStorage immediately
+    localStorage.removeItem('token');
+    localStorage.removeItem('selectedOccupantId');
+    // Clear auth state
     logout();
-  }
+    setIsCleared(true);
+  }, [logout]);
 
   const mutation = useMutation({
     mutationFn: authApi.verifyMagicLink,
@@ -42,11 +45,12 @@ export function VerifyPage() {
   });
 
   useEffect(() => {
-    if (token && !hasAttemptedVerification.current) {
+    // Only verify after session is cleared and we haven't tried yet
+    if (token && isCleared && !hasAttemptedVerification.current) {
       hasAttemptedVerification.current = true;
       mutation.mutate(token);
     }
-  }, [token]);
+  }, [token, isCleared]);
 
   if (!token) {
     return (
