@@ -19,6 +19,7 @@ import { AdminChoresPage } from './pages/admin/AdminChoresPage';
 import { AdminUnitsPage } from './pages/admin/AdminUnitsPage';
 import { AdminUnitDetailPage } from './pages/admin/AdminUnitDetailPage';
 import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -113,6 +114,7 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboardPage />} />
         <Route path="requests" element={<AdminRequestsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
 
         {/* Units routes */}
         <Route path="units" element={<AdminUnitsPage />} />

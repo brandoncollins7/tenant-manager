@@ -1,18 +1,37 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, FileText, LogOut, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Building2, FileText, LogOut, ClipboardList, Users, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useMemo } from 'react';
 
-const navItems = [
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  end?: boolean;
+  matchPaths?: string[];
+}
+
+const baseNavItems: NavItem[] = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/admin/units', icon: Building2, label: 'Units', matchPaths: ['/admin/units'] },
   { to: '/admin/tasks', icon: ClipboardList, label: 'Tasks', matchPaths: ['/admin/tasks', '/admin/tasks/chores', '/admin/tasks/schedule'] },
   { to: '/admin/requests', icon: FileText, label: 'Requests' },
 ];
 
+const superAdminNavItems: NavItem[] = [
+  { to: '/admin/users', icon: Users, label: 'Users' },
+];
+
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const navItems = useMemo(() => {
+    return isSuperAdmin ? [...baseNavItems, ...superAdminNavItems] : baseNavItems;
+  }, [isSuperAdmin]);
 
   const handleLogout = () => {
     logout();
@@ -47,12 +66,10 @@ export function AdminLayout() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="flex justify-around py-2">
           {navItems.map((item) => {
-            const { to, icon: Icon, label } = item;
-            const end = 'end' in item ? item.end : false;
-            const matchPaths = 'matchPaths' in item ? item.matchPaths : undefined;
+            const { to, icon: Icon, label, end, matchPaths } = item;
 
             // Custom active state: check matchPaths or use NavLink's default
-            const isCustomActive = matchPaths?.some(path => location.pathname.startsWith(path)) ?? false;
+            const isCustomActive = matchPaths?.some((path) => location.pathname.startsWith(path)) ?? false;
 
             return (
               <NavLink
