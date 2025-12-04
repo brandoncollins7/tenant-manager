@@ -82,6 +82,11 @@ export class RoomsService {
       throw new NotFoundException('Room not found');
     }
 
+    // Filter out inactive tenants (soft-deleted)
+    if (room.tenant && !room.tenant.isActive) {
+      return { ...room, tenant: null };
+    }
+
     return room;
   }
 

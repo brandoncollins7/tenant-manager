@@ -127,12 +127,12 @@ describe('RoomsService', () => {
   });
 
   describe('findOne', () => {
-    it('should return a room by id', async () => {
+    it('should return a room by id with active tenant', async () => {
       const mockRoom = {
         id: 'room-1',
         roomNumber: '101',
         unit: { id: 'unit-1' },
-        tenant: { occupants: [] },
+        tenant: { id: 'tenant-1', isActive: true, occupants: [] },
       };
 
       prisma.room.findUnique.mockResolvedValue(mockRoom as any);
@@ -153,6 +153,21 @@ describe('RoomsService', () => {
           },
         },
       });
+    });
+
+    it('should filter out inactive tenant from room', async () => {
+      const mockRoom = {
+        id: 'room-1',
+        roomNumber: '101',
+        unit: { id: 'unit-1' },
+        tenant: { id: 'tenant-1', isActive: false, occupants: [] },
+      };
+
+      prisma.room.findUnique.mockResolvedValue(mockRoom as any);
+
+      const result = await service.findOne('room-1');
+
+      expect(result.tenant).toBeNull();
     });
 
     it('should throw NotFoundException when room does not exist', async () => {
@@ -235,7 +250,7 @@ describe('RoomsService', () => {
         id: 'room-1',
         roomNumber: '101',
         unit: {},
-        tenant: { id: 'tenant-1', email: 'tenant@example.com' },
+        tenant: { id: 'tenant-1', email: 'tenant@example.com', isActive: true },
       };
 
       prisma.room.findUnique.mockResolvedValue(mockRoom as any);
@@ -244,6 +259,22 @@ describe('RoomsService', () => {
       await expect(service.remove('room-1')).rejects.toThrow(
         'Cannot delete room with active tenant',
       );
+    });
+
+    it('should allow delete when room has inactive tenant', async () => {
+      const mockRoom = {
+        id: 'room-1',
+        roomNumber: '101',
+        unit: {},
+        tenant: { id: 'tenant-1', email: 'tenant@example.com', isActive: false },
+      };
+
+      prisma.room.findUnique.mockResolvedValue(mockRoom as any);
+      prisma.room.delete.mockResolvedValue(mockRoom as any);
+
+      // Should not throw because tenant is inactive (filtered out)
+      const result = await service.remove('room-1');
+      expect(result).toBeDefined();
     });
 
     it('should throw NotFoundException when room does not exist', async () => {

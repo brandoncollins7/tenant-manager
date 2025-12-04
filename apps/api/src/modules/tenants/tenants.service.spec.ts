@@ -280,9 +280,9 @@ describe('TenantsService', () => {
   });
 
   describe('remove', () => {
-    it('should soft delete a tenant', async () => {
-      const existingTenant = { id: 'tenant-1', isActive: true };
-      const deletedTenant = { id: 'tenant-1', isActive: false, endDate: new Date() };
+    it('should soft delete a tenant and disconnect from room', async () => {
+      const existingTenant = { id: 'tenant-1', isActive: true, roomId: 'room-1' };
+      const deletedTenant = { id: 'tenant-1', isActive: false, endDate: new Date(), roomId: null };
 
       prisma.tenant.findUnique.mockResolvedValue(existingTenant as any);
       prisma.tenant.update.mockResolvedValue(deletedTenant as any);
@@ -291,11 +291,13 @@ describe('TenantsService', () => {
 
       expect(result.isActive).toBe(false);
       expect(result.endDate).toBeDefined();
+      expect(result.roomId).toBeNull();
       expect(prisma.tenant.update).toHaveBeenCalledWith({
         where: { id: 'tenant-1' },
         data: {
           isActive: false,
           endDate: expect.any(Date),
+          roomId: null,
         },
       });
     });

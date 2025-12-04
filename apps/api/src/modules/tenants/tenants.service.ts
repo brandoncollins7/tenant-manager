@@ -130,6 +130,7 @@ export class TenantsService {
       data: {
         isActive: false,
         endDate: new Date(),
+        roomId: null, // Disconnect from room so room becomes available
       },
     });
   }
