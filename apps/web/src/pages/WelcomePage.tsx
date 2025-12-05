@@ -11,6 +11,8 @@ import {
   Calendar,
   Eye,
   FileText,
+  Wrench,
+  MessageSquareWarning,
 } from 'lucide-react';
 
 export function WelcomePage() {
@@ -111,6 +113,18 @@ export function WelcomePage() {
             iconBg="bg-indigo-100"
             title="Lease Tracking"
             description="Store lease documents and track start/end dates. Never lose paperwork again."
+          />
+          <FeatureCard
+            icon={<Wrench className="w-6 h-6 text-amber-600" />}
+            iconBg="bg-amber-100"
+            title="Supply & Maintenance Requests"
+            description="Tenants can request cleaning supplies or report repairs. No more random texts."
+          />
+          <FeatureCard
+            icon={<MessageSquareWarning className="w-6 h-6 text-rose-600" />}
+            iconBg="bg-rose-100"
+            title="Concern Reporting"
+            description="Tenants can report issues with roommates privately. Handle problems before they escalate."
           />
         </div>
       </div>
