@@ -7,6 +7,7 @@ import {
   Min,
   Max,
   IsISO8601,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateTenantDto {
@@ -17,6 +18,10 @@ export class CreateTenantDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  @IsUUID()
+  @IsOptional()
+  unitId?: string;
 
   @IsString()
   @IsOptional()

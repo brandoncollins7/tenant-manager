@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { formatPhoneNumber } from '../../components/ui/PhoneInput';
 import { ResolveRequestModal } from '../../components/admin/ResolveRequestModal';
 import { UpdateConcernModal } from '../../components/admin/UpdateConcernModal';
 import { RequestDetailModal } from '../../components/requests/RequestDetailModal';
@@ -396,7 +397,7 @@ export function AdminRequestsPage() {
                           )}
                           {item.tenant?.phone && (
                             <span className="flex items-center gap-1">
-                              📞 {item.tenant.phone}
+                              📞 {formatPhoneNumber(item.tenant.phone)}
                             </span>
                           )}
                         </div>

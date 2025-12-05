@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { formatPhoneNumber } from '../ui/PhoneInput';
 import { DAYS_OF_WEEK } from '../../types';
 
 interface Occupant {
@@ -164,7 +165,7 @@ export function TenantInfoCard({
           {tenant.phone && (
             <span className="flex items-center gap-1">
               <Phone className="w-4 h-4" />
-              {tenant.phone}
+              {formatPhoneNumber(tenant.phone)}
             </span>
           )}
           <span className="flex items-center gap-1">

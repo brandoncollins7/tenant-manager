@@ -31,14 +31,18 @@ describe('TenantsService', () => {
         startDate: '2024-01-01T00:00:00.000Z',
       };
 
+      const mockRoom = { id: 'room-1', unitId: 'unit-1' };
       const mockTenant = {
         id: 'tenant-1',
         email: 'test@example.com',
+        unitId: 'unit-1',
         roomId: 'room-1',
         occupants: [{ id: 'occupant-1', name: 'John Doe', choreDay: 1 }],
         room: { id: 'room-1', unit: { id: 'unit-1' } },
+        unit: { id: 'unit-1' },
       };
 
+      prisma.room.findUnique.mockResolvedValue(mockRoom as any);
       prisma.tenant.create.mockResolvedValue(mockTenant as any);
 
       const result = await service.create(dto);
@@ -48,6 +52,7 @@ describe('TenantsService', () => {
         data: {
           email: 'test@example.com',
           phone: undefined,
+          unitId: 'unit-1',
           roomId: 'room-1',
           startDate: new Date(dto.startDate),
           endDate: undefined,
@@ -63,6 +68,7 @@ describe('TenantsService', () => {
           room: {
             include: { unit: true },
           },
+          unit: true,
         },
       });
     });
@@ -76,6 +82,7 @@ describe('TenantsService', () => {
         startDate: new Date().toISOString(),
       };
 
+      prisma.room.findUnique.mockResolvedValue({ id: 'room-1', unitId: 'unit-1' } as any);
       prisma.tenant.create.mockResolvedValue({ email: 'upper@case.com' } as any);
 
       await service.create(dto);
@@ -87,6 +94,29 @@ describe('TenantsService', () => {
           }),
         }),
       );
+    });
+
+    it('should use provided unitId when no roomId', async () => {
+      const dto = {
+        email: 'test@example.com',
+        unitId: 'unit-1',
+        primaryOccupantName: 'John',
+        startDate: new Date().toISOString(),
+      };
+
+      prisma.tenant.create.mockResolvedValue({ email: 'test@example.com', unitId: 'unit-1' } as any);
+
+      await service.create(dto);
+
+      expect(prisma.tenant.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            unitId: 'unit-1',
+          }),
+        }),
+      );
+      // Should not look up room when no roomId
+      expect(prisma.room.findUnique).not.toHaveBeenCalled();
     });
   });
 
@@ -107,6 +137,7 @@ describe('TenantsService', () => {
         include: {
           occupants: { where: { isActive: true } },
           room: { include: { unit: true } },
+          unit: true,
         },
         orderBy: { createdAt: 'asc' },
       });
@@ -119,12 +150,13 @@ describe('TenantsService', () => {
 
       expect(prisma.tenant.findMany).toHaveBeenCalledWith({
         where: {
-          room: { unitId: 'unit-1' },
+          unitId: 'unit-1',
           isActive: true,
         },
         include: {
           occupants: { where: { isActive: true } },
           room: { include: { unit: true } },
+          unit: true,
         },
         orderBy: { createdAt: 'asc' },
       });
@@ -137,12 +169,13 @@ describe('TenantsService', () => {
 
       expect(prisma.tenant.findMany).toHaveBeenCalledWith({
         where: {
-          room: { unitId: { in: ['unit-1', 'unit-2'] } },
+          unitId: { in: ['unit-1', 'unit-2'] },
           isActive: true,
         },
         include: {
           occupants: { where: { isActive: true } },
           room: { include: { unit: true } },
+          unit: true,
         },
         orderBy: { createdAt: 'asc' },
       });

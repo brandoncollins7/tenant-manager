@@ -58,6 +58,7 @@ describe('AuthService', () => {
       const mockTenant = {
         id: 'tenant-1',
         email: 'test@example.com',
+        unitId: 'unit-1',
         roomId: 'room-1',
         phone: null,
         startDate: new Date(),

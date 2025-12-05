@@ -29,7 +29,14 @@
       "Bash(npx nest build:*)",
       "Bash(git worktree:*)",
       "Bash(git log:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(pnpm run test:e2e:*)",
+      "Bash(git stash:*)",
+      "Bash(pnpm dev:1:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

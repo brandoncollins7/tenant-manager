@@ -8,10 +8,23 @@ export class TenantsService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateTenantDto) {
+    // If roomId is provided, get the unitId from the room
+    let unitId = dto.unitId;
+    if (dto.roomId && !unitId) {
+      const room = await this.prisma.room.findUnique({
+        where: { id: dto.roomId },
+        select: { unitId: true },
+      });
+      if (room) {
+        unitId = room.unitId;
+      }
+    }
+
     return this.prisma.tenant.create({
       data: {
         email: dto.email.toLowerCase().trim(),
         phone: dto.phone,
+        unitId,
         roomId: dto.roomId,
         startDate: new Date(dto.startDate),
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
@@ -27,6 +40,7 @@ export class TenantsService {
         room: {
           include: { unit: true },
         },
+        unit: true,
       },
     });
   }
@@ -35,9 +49,10 @@ export class TenantsService {
     let where: any = { isActive: true };
 
     if (unitId) {
-      where.room = { unitId };
+      // Filter by unitId directly (includes tenants with or without rooms)
+      where.unitId = unitId;
     } else if (adminRole === 'PROPERTY_MANAGER' && adminUnitIds?.length) {
-      where.room = { unitId: { in: adminUnitIds } };
+      where.unitId = { in: adminUnitIds };
     }
 
     return this.prisma.tenant.findMany({
@@ -49,6 +64,7 @@ export class TenantsService {
         room: {
           include: { unit: true },
         },
+        unit: true,
       },
       orderBy: { createdAt: 'asc' },
     });
