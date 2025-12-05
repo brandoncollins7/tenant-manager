@@ -2,6 +2,8 @@
 
 A mobile-first web application for managing shared chores in rental apartments. Tenants can track chore completion with photo proof, request day swaps, and view completion history.
 
+**Production URL**: https://rentably.app/
+
 ## Project Structure
 
 ```
@@ -146,6 +148,7 @@ All endpoints prefixed with `/api`
 ### Public
 - `/login` - Login page
 - `/verify` - Magic link verification
+- `/welcome` - Features landing page for new users
 
 ### Tenant (Protected)
 - `/` - Dashboard (today's chores)

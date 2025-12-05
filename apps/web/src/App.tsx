@@ -20,6 +20,7 @@ import { AdminUnitsPage } from './pages/admin/AdminUnitsPage';
 import { AdminUnitDetailPage } from './pages/admin/AdminUnitDetailPage';
 import { AdminRoomDetailPage } from './pages/admin/AdminRoomDetailPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { WelcomePage } from './pages/WelcomePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -102,6 +103,7 @@ function AppRoutes() {
         }
       />
       <Route path="/verify" element={<VerifyPage />} />
+      <Route path="/welcome" element={<WelcomePage />} />
 
       {/* Admin routes */}
       <Route
