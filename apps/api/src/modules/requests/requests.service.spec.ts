@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { RequestsService } from './requests.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ConcernsService } from '../concerns/concerns.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient, RequestType, RequestStatus } from '@prisma/client';
 
@@ -22,6 +23,12 @@ describe('RequestsService', () => {
             createRequestReceivedNotification: jest.fn(),
             sendRequestEmailToAdmin: jest.fn(),
             createRequestResolvedNotification: jest.fn(),
+          },
+        },
+        {
+          provide: ConcernsService,
+          useValue: {
+            findAll: jest.fn().mockResolvedValue([]),
           },
         },
       ],

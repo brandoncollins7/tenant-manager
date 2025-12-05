@@ -1,5 +1,11 @@
 import { apiClient } from './client';
-import type { Request } from '../types';
+import type {
+  Request,
+  CombinedRequestItem,
+  CombinedStats,
+  ReportableTenant,
+  RequestCategory,
+} from '../types';
 
 export const requestsApi = {
   getAll: async (filters?: {
@@ -41,6 +47,39 @@ export const requestsApi = {
       { notes },
       { params: { resolvedBy } }
     );
+    return response.data;
+  },
+
+  // Combined endpoints
+  getCombined: async (tenantId: string): Promise<CombinedRequestItem[]> => {
+    const response = await apiClient.get('/requests/combined', {
+      params: { tenantId },
+    });
+    return response.data;
+  },
+
+  getAdminCombined: async (filters?: {
+    unitId?: string;
+    status?: string;
+    category?: RequestCategory;
+  }): Promise<CombinedRequestItem[]> => {
+    const response = await apiClient.get('/requests/admin/combined', {
+      params: filters,
+    });
+    return response.data;
+  },
+
+  getCombinedStats: async (unitId: string): Promise<CombinedStats> => {
+    const response = await apiClient.get('/requests/combined/stats', {
+      params: { unitId },
+    });
+    return response.data;
+  },
+
+  getReportableTenants: async (tenantId: string): Promise<ReportableTenant[]> => {
+    const response = await apiClient.get('/requests/reportable-tenants', {
+      params: { tenantId },
+    });
     return response.data;
   },
 };

@@ -114,6 +114,7 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboardPage />} />
         <Route path="requests" element={<AdminRequestsPage />} />
+        <Route path="concerns" element={<Navigate to="/admin/requests" replace />} />
         <Route path="users" element={<AdminUsersPage />} />
 
         {/* Units routes */}
@@ -140,6 +141,7 @@ function AppRoutes() {
         <Route path="chores" element={<ChoresPage />} />
         <Route path="swaps" element={<SwapsPage />} />
         <Route path="requests" element={<RequestsPage />} />
+        <Route path="concerns" element={<Navigate to="/requests" replace />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

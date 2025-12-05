@@ -12,6 +12,7 @@ import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { ResolveRequestDto } from './dto/resolve-request.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
+import { AdminGuard } from '../../common/guards/admin.guard';
 import { RequestStatus, RequestType } from '@prisma/client';
 
 @Controller('requests')
@@ -40,6 +41,48 @@ export class RequestsController {
       status,
       type,
     });
+  }
+
+  /**
+   * Get combined requests and concerns for a tenant
+   */
+  @Get('combined')
+  findCombined(@Query('tenantId') tenantId: string) {
+    return this.requestsService.findCombined(tenantId);
+  }
+
+  /**
+   * Get combined requests and concerns for admin view
+   */
+  @Get('admin/combined')
+  @UseGuards(AdminGuard)
+  findCombinedAdmin(
+    @Query('unitId') unitId?: string,
+    @Query('status') status?: string,
+    @Query('category') category?: 'REQUEST' | 'CONCERN',
+  ) {
+    return this.requestsService.findCombinedAdmin({
+      unitId,
+      status,
+      category,
+    });
+  }
+
+  /**
+   * Get combined stats for requests and concerns
+   */
+  @Get('combined/stats')
+  @UseGuards(AdminGuard)
+  getCombinedStats(@Query('unitId') unitId: string) {
+    return this.requestsService.getCombinedStats(unitId);
+  }
+
+  /**
+   * Get reportable tenants for concerns (delegates to concerns service)
+   */
+  @Get('reportable-tenants')
+  getReportableTenants(@Query('tenantId') tenantId: string) {
+    return this.requestsService.getReportableTenants(tenantId);
   }
 
   @Get(':id')

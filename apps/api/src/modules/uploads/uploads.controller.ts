@@ -13,10 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../../common/guards/jwt.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
-import { UnitAccessGuard } from '../../common/guards/unit-access.guard';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
-import { UnitScoped } from '../../common/decorators/unit-scoped.decorator';
 import { JwtPayload } from '../auth/auth.service';
 
 @Controller('uploads')
@@ -54,13 +51,23 @@ export class UploadsController {
   }
 
   @Get(':tenantId/:filename')
-  @UseGuards(JwtAuthGuard, AdminGuard, UnitAccessGuard)
-  @UnitScoped('photo', 'tenantId')
+  @UseGuards(JwtAuthGuard)
   async getPhoto(
+    @CurrentTenant() user: JwtPayload,
     @Param('tenantId') tenantId: string,
     @Param('filename') filename: string,
     @Res() res: Response,
   ) {
+    // Allow access if user is admin OR if user is the tenant who owns the photo
+    const userTenantId = user.tenantId || user.sub;
+    const isOwner = userTenantId === tenantId;
+    const isAdmin = user.isAdmin;
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
     try {
       const filepath = `${tenantId}/${filename}`;
       const buffer = await this.uploadsService.getPhoto(filepath);

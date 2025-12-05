@@ -224,6 +224,33 @@ MAX_FILE_SIZE=5242880
 - Week IDs are ISO date strings of the Monday (e.g., "2024-11-25")
 - Photos are stored locally in `apps/api/uploads/` (compressed to max 1200x1200 JPEG)
 
+## React Query Cache Invalidation
+
+**IMPORTANT**: When adding UI features that modify data, always ensure the UI updates immediately without requiring a page refresh.
+
+For any mutation (create, update, delete), invalidate ALL related queries in `onSuccess`:
+
+```typescript
+const mutation = useMutation({
+  mutationFn: (data) => api.updateItem(data),
+  onSuccess: () => {
+    // Invalidate all queries that might display this data
+    queryClient.invalidateQueries({ queryKey: ['items'] });
+    queryClient.invalidateQueries({ queryKey: ['admin', 'items'] });
+    // Also invalidate combined/aggregate queries
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    toast.success('Item updated');
+    onClose();
+  },
+});
+```
+
+Common patterns to watch for:
+- **Combined/aggregate endpoints**: If a page fetches from `/api/requests/combined`, invalidating `['requests']` alone won't work - you need `['admin', 'requests']` to match the combined query key
+- **Multiple views of same data**: Admin and tenant views often use different query keys but show the same data
+- **Parent-child relationships**: Updating a child entity should often invalidate the parent's queries too
+- **Stats/counts**: Don't forget to invalidate dashboard stats when data changes
+
 ## Security
 
 All API endpoints must be secured with appropriate guards:
@@ -234,3 +261,5 @@ All API endpoints must be secured with appropriate guards:
 **Unit-scoped access**: Non-super admins can only view/manage data for units they are assigned to. This includes tenants, occupants, chores, photos, and all other unit-related data. Always verify the admin has access to the relevant unit before returning data.
 
 When adding new endpoints, always apply `@UseGuards(JwtAuthGuard)` at minimum. Never leave endpoints publicly accessible unless explicitly required.
+- Should always run the unit test suite before pushing
+- When fixing a bug, always use TDD development to prove the bug was fixed

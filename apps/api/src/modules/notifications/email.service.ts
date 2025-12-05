@@ -492,4 +492,99 @@ export class EmailService {
       this.logger.warn(`[DEV] Summary: ${completed} completed, ${missed} missed (${completionRate}%)`);
     }
   }
+
+  async sendConcernToAdmin(
+    adminEmail: string,
+    reporter: any,
+    reported: any,
+    concern: any,
+  ): Promise<void> {
+    const typeLabels: Record<string, string> = {
+      NOISE: 'Noise Complaint',
+      CLEANLINESS: 'Cleanliness Issue',
+      HARASSMENT: 'Harassment Report',
+      PROPERTY_DAMAGE: 'Property Damage',
+      OTHER: 'Other Concern',
+    };
+    const severityColors: Record<string, string> = {
+      LOW: '#16a34a',
+      MEDIUM: '#eab308',
+      HIGH: '#dc2626',
+    };
+    const severityLabels: Record<string, string> = {
+      LOW: 'Low',
+      MEDIUM: 'Medium',
+      HIGH: 'High',
+    };
+
+    const typeLabel = typeLabels[concern.type] || concern.type;
+    const severityColor = severityColors[concern.severity] || '#6b7280';
+    const severityLabel = severityLabels[concern.severity] || concern.severity;
+    const subject = `[${severityLabel} Priority] Concern Raised: ${typeLabel} - Room ${reporter.room.roomNumber}`;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333; font-size: 24px;">Tenant Concern Raised</h1>
+
+          <div style="background-color: ${severityColor}; color: white; padding: 8px 16px; border-radius: 4px; display: inline-block; font-weight: 600; margin-bottom: 20px;">
+            ${severityLabel} Priority
+          </div>
+
+          <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Type:</strong> ${typeLabel}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Reported by:</strong> Room ${reporter.room.roomNumber}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Concern about:</strong> Room ${reported.room.roomNumber}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 16px 0 8px 0;">
+              <strong>Description:</strong><br>
+              ${concern.description}
+            </p>
+            <p style="color: #374151; font-size: 14px; margin: 8px 0;">
+              <strong>Reporter contact:</strong> ${reporter.email}${reporter.phone ? ` • ${reporter.phone}` : ''}
+            </p>
+            ${concern.photoPath ? '<p style="color: #374151; font-size: 14px; margin: 8px 0;"><strong>Evidence photo:</strong> Yes (view in dashboard)</p>' : ''}
+          </div>
+
+          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 12px 16px; margin: 20px 0;">
+            <p style="color: #92400e; font-size: 14px; margin: 0;">
+              <strong>Note:</strong> The reported tenant has not been notified of this concern. This is a private report to management only.
+            </p>
+          </div>
+
+          <a href="${frontendUrl}/admin/concerns" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0;">
+            View in Admin Dashboard
+          </a>
+        </body>
+      </html>
+    `;
+
+    if (this.provider.isConfigured()) {
+      try {
+        await this.provider.send({
+          from: this.fromEmail,
+          to: adminEmail,
+          subject,
+          html,
+        });
+        this.logger.log(`Concern notification email sent to admin ${adminEmail}`);
+      } catch (error) {
+        this.logger.error(`Failed to send concern email to admin ${adminEmail}`, error);
+      }
+    } else {
+      this.logger.warn(`[DEV] Concern notification for admin ${adminEmail}: ${subject}`);
+      this.logger.warn(`[DEV] Type: ${typeLabel}, Severity: ${severityLabel}, Reporter: Room ${reporter.room.roomNumber}, About: Room ${reported.room.roomNumber}`);
+    }
+  }
 }

@@ -16,6 +16,7 @@ import { StatsModule } from './modules/stats/stats.module';
 import { UnitsModule } from './modules/units/units.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { RequestsModule } from './modules/requests/requests.module';
+import { ConcernsModule } from './modules/concerns/concerns.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -41,6 +42,7 @@ import { HealthController } from './health.controller';
     UnitsModule,
     RoomsModule,
     RequestsModule,
+    ConcernsModule,
   ],
   controllers: [HealthController],
 })

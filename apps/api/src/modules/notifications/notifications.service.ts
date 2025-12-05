@@ -192,4 +192,34 @@ export class NotificationsService {
 
     return notification;
   }
+
+  async sendConcernEmailToUnitAdmins(
+    unitId: string,
+    reporter: any,
+    reported: any,
+    concern: any,
+  ) {
+    // Get all admins assigned to this unit via AdminUnitAssignment
+    const assignments = await this.prisma.adminUnitAssignment.findMany({
+      where: { unitId },
+      include: { admin: true },
+    });
+
+    // Also check unit.adminEmail for legacy support
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+    });
+
+    // Collect unique admin emails
+    const adminEmails = new Set<string>();
+    assignments.forEach(a => adminEmails.add(a.admin.email));
+    if (unit?.adminEmail) {
+      adminEmails.add(unit.adminEmail);
+    }
+
+    // Send email to each admin
+    for (const email of adminEmails) {
+      await this.emailService.sendConcernToAdmin(email, reporter, reported, concern);
+    }
+  }
 }

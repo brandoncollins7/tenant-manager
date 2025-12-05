@@ -22,6 +22,7 @@ model Unit {
   rooms            Room[]
   chores           ChoreDefinition[]
   requests         Request[]
+  concerns         Concern[]
   adminAssignments AdminUnitAssignment[]
 
   @@map("units")
@@ -63,6 +64,8 @@ model Tenant {
   notifications  Notification[]
   requests       Request[]
   leaseDocuments LeaseDocument[]
+  concernsReported Concern[]     @relation("ConcernsReported")
+  concernsReceived Concern[]     @relation("ConcernsReceived")
 
   @@map("tenants")
 }
@@ -304,6 +307,31 @@ enum RequestStatus {
   RESOLVED
 }
 
+// ============================================
+// CONCERNS (Tenant-to-Tenant Issues)
+// ============================================
+
+enum ConcernType {
+  NOISE
+  CLEANLINESS
+  HARASSMENT
+  PROPERTY_DAMAGE
+  OTHER
+}
+
+enum ConcernSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ConcernStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
 model Request {
   id          String        @id @default(uuid())
   createdAt   DateTime      @default(now())
@@ -324,6 +352,32 @@ model Request {
   @@index([tenantId])
   @@index([unitId, status])
   @@map("requests")
+}
+
+model Concern {
+  id          String          @id @default(uuid())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  reporterId  String
+  reportedId  String
+  unitId      String
+  type        ConcernType
+  severity    ConcernSeverity @default(MEDIUM)
+  description String
+  photoPath   String?
+  status      ConcernStatus   @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  notes       String?
+
+  reporter Tenant @relation("ConcernsReported", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported Tenant @relation("ConcernsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+  unit     Unit   @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([unitId, status])
+  @@map("concerns")
 }
 
 // ============================================

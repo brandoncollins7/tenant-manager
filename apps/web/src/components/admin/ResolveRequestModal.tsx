@@ -28,6 +28,7 @@ export function ResolveRequestModal({
       requestsApi.resolve(id, adminEmail, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'requests'] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
       toast.success('Request marked as resolved');
       handleClose();
     },
