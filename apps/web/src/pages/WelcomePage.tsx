@@ -10,6 +10,7 @@ import {
   Users,
   Calendar,
   Eye,
+  FileText,
 } from 'lucide-react';
 
 export function WelcomePage() {
@@ -104,6 +105,12 @@ export function WelcomePage() {
             iconBg="bg-teal-100"
             title="Stats & History"
             description="See completion rates over time. Spot patterns and keep things fair."
+          />
+          <FeatureCard
+            icon={<FileText className="w-6 h-6 text-indigo-600" />}
+            iconBg="bg-indigo-100"
+            title="Lease Tracking"
+            description="Store lease documents and track start/end dates. Never lose paperwork again."
           />
         </div>
       </div>
