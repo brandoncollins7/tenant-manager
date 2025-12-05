@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, X, FileText } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
+import { PhoneInput } from '../ui/PhoneInput';
 import { Button } from '../ui/Button';
 import { apiClient } from '../../api/client';
 import { DAYS_OF_WEEK } from '../../types';
@@ -154,12 +155,10 @@ export function AddTenantModal({ isOpen, onClose }: AddTenantModalProps) {
           placeholder="tenant@example.com"
         />
 
-        <Input
+        <PhoneInput
           label="Phone (optional)"
-          type="tel"
           value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="+1 (555) 123-4567"
+          onChange={(phone) => setFormData({ ...formData, phone })}
         />
 
         <div className="w-full">

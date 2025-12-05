@@ -16,6 +16,7 @@ import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { PhoneInput } from '../../components/ui/PhoneInput';
 import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
@@ -182,6 +183,7 @@ export function AdminUnitDetailPage() {
       const response = await apiClient.post('/tenants', {
         email: data.email,
         phone: data.phone || undefined,
+        unitId, // Always include the current unitId
         roomId: data.roomId || undefined,
         startDate: new Date(data.startDate).toISOString(),
         primaryOccupantName: data.primaryOccupantName,
@@ -730,12 +732,10 @@ export function AdminUnitDetailPage() {
             placeholder="tenant@example.com"
           />
 
-          <Input
+          <PhoneInput
             label="Phone (optional)"
-            type="tel"
             value={tenantForm.phone}
-            onChange={(e) => setTenantForm({ ...tenantForm, phone: e.target.value })}
-            placeholder="+1 (555) 123-4567"
+            onChange={(phone) => setTenantForm({ ...tenantForm, phone })}
           />
 
           <div className="w-full">
@@ -972,12 +972,10 @@ export function AdminUnitDetailPage() {
             required
           />
 
-          <Input
+          <PhoneInput
             label="Phone (Optional)"
-            type="tel"
             value={editTenantForm.phone}
-            onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
-            placeholder="+1234567890"
+            onChange={(phone) => setEditTenantForm({ ...editTenantForm, phone })}
           />
 
           <Input

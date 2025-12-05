@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PhoneInput } from '../../components/ui/PhoneInput';
 import { Modal } from '../../components/ui/Modal';
 import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
@@ -616,12 +617,10 @@ export function AdminRoomDetailPage() {
                 required
               />
 
-              <Input
+              <PhoneInput
                 label="Phone (Optional)"
-                type="tel"
                 value={newTenantForm.phone}
-                onChange={(e) => setNewTenantForm({ ...newTenantForm, phone: e.target.value })}
-                placeholder="+1234567890"
+                onChange={(phone) => setNewTenantForm({ ...newTenantForm, phone })}
               />
 
               <Input
@@ -731,12 +730,10 @@ export function AdminRoomDetailPage() {
             required
           />
 
-          <Input
+          <PhoneInput
             label="Phone (Optional)"
-            type="tel"
             value={editTenantForm.phone}
-            onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
-            placeholder="+1234567890"
+            onChange={(phone) => setEditTenantForm({ ...editTenantForm, phone })}
           />
 
           <Input
