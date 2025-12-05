@@ -55,9 +55,9 @@ export function Modal({ isOpen, onClose, title, children, trackingId }: ModalPro
       />
 
       {/* Modal Container */}
-      <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center p-0 sm:p-6 pointer-events-none">
+      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6 pointer-events-none overflow-y-auto">
         {/* Modal */}
-        <div className="pointer-events-auto relative w-full sm:max-w-lg bg-white sm:rounded-2xl h-auto sm:max-h-[90vh] overflow-hidden shadow-xl self-end sm:self-center">
+        <div className="pointer-events-auto relative w-full sm:max-w-lg bg-white rounded-2xl sm:max-h-[90vh] overflow-hidden shadow-xl my-auto sm:my-0">
           {/* Header */}
           {title && (
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
