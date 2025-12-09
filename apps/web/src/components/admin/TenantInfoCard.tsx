@@ -78,24 +78,22 @@ export function TenantInfoCard({
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {roomNumber ? `Room ${roomNumber}` : 'Tenant Information'}
-            </h2>
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                tenant.isActive
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {tenant.isActive ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-        </div>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {roomNumber ? `Room ${roomNumber}` : 'Tenant Information'}
+          </h2>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              tenant.isActive
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {tenant.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 -mx-1 sm:mx-0">
           {isSuperAdmin && onImpersonate && (
             <Button
               variant="secondary"
@@ -103,8 +101,8 @@ export function TenantInfoCard({
               onClick={onImpersonate}
               disabled={isPendingImpersonate}
             >
-              <UserCheck className="w-4 h-4 mr-2" />
-              {isPendingImpersonate ? 'Loading...' : 'Impersonate'}
+              <UserCheck className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{isPendingImpersonate ? 'Loading...' : 'Impersonate'}</span>
             </Button>
           )}
           <Button
@@ -113,8 +111,8 @@ export function TenantInfoCard({
             onClick={onResendLoginEmail}
             disabled={isPendingResendEmail}
           >
-            <Mail className="w-4 h-4 mr-2" />
-            {isPendingResendEmail ? 'Sending...' : 'Resend Login Email'}
+            <Mail className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{isPendingResendEmail ? 'Sending...' : 'Resend Login Email'}</span>
           </Button>
           {onRemoveFromRoom && (
             <Button
@@ -123,8 +121,8 @@ export function TenantInfoCard({
               onClick={onRemoveFromRoom}
               disabled={isPendingRemove}
             >
-              <UserMinus className="w-4 h-4 mr-2" />
-              {isPendingRemove ? 'Removing...' : 'Remove from Room'}
+              <UserMinus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{isPendingRemove ? 'Removing...' : 'Remove from Room'}</span>
             </Button>
           )}
           {onDeleteTenant && (
@@ -133,8 +131,8 @@ export function TenantInfoCard({
               size="sm"
               onClick={onDeleteTenant}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Tenant
+              <Trash2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Delete Tenant</span>
             </Button>
           )}
         </div>
