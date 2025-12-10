@@ -54,7 +54,7 @@ export class AuthService {
 
     // Generate secure token
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
 
     // Store magic link
     if (tenant) {
@@ -290,7 +290,7 @@ export class AuthService {
 
     // Generate secure token
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
 
     // Store magic link
     await this.prisma.magicLink.create({
@@ -316,7 +316,7 @@ export class AuthService {
 
     // Generate secure token
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
 
     // Store admin magic link
     await this.prisma.adminMagicLink.create({
