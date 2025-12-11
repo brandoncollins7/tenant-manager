@@ -92,14 +92,12 @@ export class RequestsService {
       request.id,
     );
 
-    // Send email to admin if adminEmail is configured
-    if (tenant.room.unit.adminEmail) {
-      await this.notificationsService.sendRequestEmailToAdmin(
-        tenant.room.unit.adminEmail,
-        tenant,
-        request,
-      );
-    }
+    // Send email to all relevant admins (super admins, unit managers, legacy adminEmail)
+    await this.notificationsService.sendRequestEmailToUnitAdmins(
+      tenant.room.unitId,
+      tenant,
+      request,
+    );
 
     return request;
   }

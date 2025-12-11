@@ -21,7 +21,7 @@ describe('RequestsService', () => {
           provide: NotificationsService,
           useValue: {
             createRequestReceivedNotification: jest.fn(),
-            sendRequestEmailToAdmin: jest.fn(),
+            sendRequestEmailToUnitAdmins: jest.fn(),
             createRequestResolvedNotification: jest.fn(),
           },
         },
@@ -98,8 +98,8 @@ describe('RequestsService', () => {
         RequestType.CLEANING_SUPPLIES,
         'request-1',
       );
-      expect(notificationsService.sendRequestEmailToAdmin).toHaveBeenCalledWith(
-        'admin@example.com',
+      expect(notificationsService.sendRequestEmailToUnitAdmins).toHaveBeenCalledWith(
+        'unit-1',
         mockTenant,
         mockRequest,
       );
@@ -168,7 +168,7 @@ describe('RequestsService', () => {
       expect(prisma.request.create).not.toHaveBeenCalled();
     });
 
-    it('should not send email when adminEmail is not configured', async () => {
+    it('should always send email to unit admins regardless of legacy adminEmail', async () => {
       const mockTenant = {
         id: 'tenant-1',
         room: {
@@ -176,7 +176,7 @@ describe('RequestsService', () => {
           unitId: 'unit-1',
           unit: {
             id: 'unit-1',
-            adminEmail: null,
+            adminEmail: null, // No legacy adminEmail configured
           },
         },
       };
@@ -197,7 +197,12 @@ describe('RequestsService', () => {
       });
 
       expect(notificationsService.createRequestReceivedNotification).toHaveBeenCalled();
-      expect(notificationsService.sendRequestEmailToAdmin).not.toHaveBeenCalled();
+      // Should still call sendRequestEmailToUnitAdmins which handles super admins and assigned managers
+      expect(notificationsService.sendRequestEmailToUnitAdmins).toHaveBeenCalledWith(
+        'unit-1',
+        mockTenant,
+        mockRequest,
+      );
     });
   });
 

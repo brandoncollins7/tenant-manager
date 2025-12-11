@@ -193,13 +193,24 @@ export class NotificationsService {
     return notification;
   }
 
+  /**
+   * Send concern notification emails to all relevant admins:
+   * - All super admins
+   * - All property managers assigned to the unit
+   * - Legacy unit.adminEmail if configured
+   */
   async sendConcernEmailToUnitAdmins(
     unitId: string,
     reporter: any,
     reported: any,
     concern: any,
   ) {
-    // Get all admins assigned to this unit via AdminUnitAssignment
+    // Get all super admins
+    const superAdmins = await this.prisma.admin.findMany({
+      where: { role: 'SUPER_ADMIN' },
+    });
+
+    // Get all property managers assigned to this unit via AdminUnitAssignment
     const assignments = await this.prisma.adminUnitAssignment.findMany({
       where: { unitId },
       include: { admin: true },
@@ -212,6 +223,7 @@ export class NotificationsService {
 
     // Collect unique admin emails
     const adminEmails = new Set<string>();
+    superAdmins.forEach(a => adminEmails.add(a.email));
     assignments.forEach(a => adminEmails.add(a.admin.email));
     if (unit?.adminEmail) {
       adminEmails.add(unit.adminEmail);
@@ -220,6 +232,47 @@ export class NotificationsService {
     // Send email to each admin
     for (const email of adminEmails) {
       await this.emailService.sendConcernToAdmin(email, reporter, reported, concern);
+    }
+  }
+
+  /**
+   * Send request notification emails to all relevant admins:
+   * - All super admins
+   * - All property managers assigned to the unit
+   * - Legacy unit.adminEmail if configured
+   */
+  async sendRequestEmailToUnitAdmins(
+    unitId: string,
+    tenant: any,
+    request: any,
+  ) {
+    // Get all super admins
+    const superAdmins = await this.prisma.admin.findMany({
+      where: { role: 'SUPER_ADMIN' },
+    });
+
+    // Get all property managers assigned to this unit
+    const assignments = await this.prisma.adminUnitAssignment.findMany({
+      where: { unitId },
+      include: { admin: true },
+    });
+
+    // Also check unit.adminEmail for legacy support
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+    });
+
+    // Collect unique admin emails
+    const adminEmails = new Set<string>();
+    superAdmins.forEach(a => adminEmails.add(a.email));
+    assignments.forEach(a => adminEmails.add(a.admin.email));
+    if (unit?.adminEmail) {
+      adminEmails.add(unit.adminEmail);
+    }
+
+    // Send email to each admin
+    for (const email of adminEmails) {
+      await this.emailService.sendRequestToAdmin(email, tenant, request);
     }
   }
 }
