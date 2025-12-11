@@ -100,8 +100,10 @@ export function TenantInfoCard({
               size="sm"
               onClick={onImpersonate}
               disabled={isPendingImpersonate}
+              title="Impersonate tenant"
             >
-              <UserCheck className="w-4 h-4 sm:mr-2" />
+              <UserCheck className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="sm:hidden">{isPendingImpersonate ? '...' : 'Login As'}</span>
               <span className="hidden sm:inline">{isPendingImpersonate ? 'Loading...' : 'Impersonate'}</span>
             </Button>
           )}
@@ -110,8 +112,10 @@ export function TenantInfoCard({
             size="sm"
             onClick={onResendLoginEmail}
             disabled={isPendingResendEmail}
+            title="Resend login email"
           >
-            <Mail className="w-4 h-4 sm:mr-2" />
+            <Mail className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="sm:hidden">{isPendingResendEmail ? '...' : 'Email'}</span>
             <span className="hidden sm:inline">{isPendingResendEmail ? 'Sending...' : 'Resend Login Email'}</span>
           </Button>
           {onRemoveFromRoom && (
@@ -120,8 +124,10 @@ export function TenantInfoCard({
               size="sm"
               onClick={onRemoveFromRoom}
               disabled={isPendingRemove}
+              title="Remove tenant from room"
             >
-              <UserMinus className="w-4 h-4 sm:mr-2" />
+              <UserMinus className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="sm:hidden">{isPendingRemove ? '...' : 'Remove'}</span>
               <span className="hidden sm:inline">{isPendingRemove ? 'Removing...' : 'Remove from Room'}</span>
             </Button>
           )}
@@ -130,8 +136,10 @@ export function TenantInfoCard({
               variant="danger"
               size="sm"
               onClick={onDeleteTenant}
+              title="Delete tenant"
             >
-              <Trash2 className="w-4 h-4 sm:mr-2" />
+              <Trash2 className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="sm:hidden">Delete</span>
               <span className="hidden sm:inline">Delete Tenant</span>
             </Button>
           )}
