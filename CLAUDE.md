@@ -264,5 +264,18 @@ All API endpoints must be secured with appropriate guards:
 **Unit-scoped access**: Non-super admins can only view/manage data for units they are assigned to. This includes tenants, occupants, chores, photos, and all other unit-related data. Always verify the admin has access to the relevant unit before returning data.
 
 When adding new endpoints, always apply `@UseGuards(JwtAuthGuard)` at minimum. Never leave endpoints publicly accessible unless explicitly required.
-- Should always run the unit test suite before pushing
+
+## Before Pushing Code
+
+**MANDATORY - Do not skip these steps:**
+
+1. `pnpm test` - All tests must pass
+2. `pnpm build` - Build must succeed
+3. Only then commit and push
+
+**NEVER push without running tests first. No exceptions.**
+
+## Development Workflow
+
 - When fixing a bug, always use TDD development to prove the bug was fixed
+- Always log a new bead before starting work, if one does not exist. Update its progress as you go
