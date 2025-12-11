@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Clock, CheckCircle, Camera, Filter, Eye, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { formatPhoneNumber } from '../../components/ui/PhoneInput';
 import { ResolveRequestModal } from '../../components/admin/ResolveRequestModal';
 import { UpdateConcernModal } from '../../components/admin/UpdateConcernModal';
@@ -223,13 +225,42 @@ export function AdminRequestsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-5 w-40" />
+        </div>
+        <Card>
+          <CardBody>
+            <div className="flex gap-2 flex-wrap">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-9 w-20 rounded-lg" />
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardBody>
+                <div className="flex items-start gap-4">
+                  <Skeleton className="w-10 h-10 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -319,7 +350,7 @@ export function AdminRequestsPage() {
 
       {/* List */}
       {combinedItems && combinedItems.length > 0 ? (
-        <div className="space-y-3">
+        <AnimatedList className="space-y-3">
           {combinedItems.map((item) => {
             const isActive = item.status === 'PENDING' || item.status === 'UNDER_REVIEW';
             const isHighPriority = item.category === 'CONCERN' && item.severity === 'HIGH' && isActive;
@@ -434,7 +465,7 @@ export function AdminRequestsPage() {
               </Card>
             );
           })}
-        </div>
+        </AnimatedList>
       ) : (
         <Card>
           <CardBody className="text-center py-12">
@@ -480,5 +511,6 @@ export function AdminRequestsPage() {
         }}
       />
     </div>
+    </FadeIn>
   );
 }

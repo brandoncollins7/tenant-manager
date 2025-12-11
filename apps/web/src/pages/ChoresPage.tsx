@@ -4,8 +4,10 @@ import { ChevronLeft, ChevronRight, Check, Clock } from 'lucide-react';
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { choresApi } from '../api/chores';
 import { useAuth } from '../context/AuthContext';
+import { AnimatedList, FadeIn } from '../components/ui/AnimatedList';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
 import { CompletionModal } from '../components/chores/CompletionModal';
 import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
 
@@ -65,6 +67,7 @@ export function ChoresPage() {
   );
 
   return (
+    <FadeIn>
     <div className="space-y-4">
       {/* Week Navigation */}
       <Card>
@@ -94,8 +97,24 @@ export function ChoresPage() {
 
       {/* Schedule */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardBody>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="h-6 w-12 rounded-full" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              </CardBody>
+            </Card>
+          ))}
         </div>
       ) : !schedule || !completionsByOccupant ? (
         <Card>
@@ -104,7 +123,7 @@ export function ChoresPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <AnimatedList className="space-y-4">
           {Object.values(completionsByOccupant).map(({ occupant, completions }) => {
             const completedCount = completions.filter(
               (c) => c.status === 'COMPLETED'
@@ -196,7 +215,7 @@ export function ChoresPage() {
               </Card>
             );
           })}
-        </div>
+        </AnimatedList>
       )}
 
       {/* Completion Modal */}
@@ -205,5 +224,6 @@ export function ChoresPage() {
         onClose={() => setSelectedCompletion(null)}
       />
     </div>
+    </FadeIn>
   );
 }

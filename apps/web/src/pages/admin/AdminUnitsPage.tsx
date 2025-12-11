@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Building, ChevronRight, Users, DoorOpen, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { apiClient } from '../../api/client';
 import { extractErrorMessage } from '../../utils/errors';
 
@@ -102,13 +104,39 @@ export function AdminUnitsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-5 w-40" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-lg" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardBody className="p-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-100 flex gap-4">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -135,7 +163,7 @@ export function AdminUnitsPage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <AnimatedList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {units?.map((unit) => (
             <Card
               key={unit.id}
@@ -191,7 +219,7 @@ export function AdminUnitsPage() {
               </CardBody>
             </Card>
           ))}
-        </div>
+        </AnimatedList>
       )}
 
       {/* Add/Edit Unit Modal */}
@@ -280,5 +308,6 @@ export function AdminUnitsPage() {
         </div>
       </Modal>
     </div>
+    </FadeIn>
   );
 }

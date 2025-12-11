@@ -9,7 +9,9 @@ import {
   ShoppingCart,
   Clock,
 } from 'lucide-react';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { apiClient } from '../../api/client';
 
 interface DashboardStats {
@@ -77,8 +79,38 @@ export function AdminDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-5 w-48" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardBody className="p-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="min-w-0 space-y-1">
+                    <Skeleton className="h-6 w-8" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
+            </div>
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -88,6 +120,7 @@ export function AdminDashboardPage() {
   const overdueChores = data?.overdueChores ?? [];
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -167,7 +200,7 @@ export function AdminDashboardPage() {
               <p className="text-gray-500 text-sm">No pending requests</p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <AnimatedList className="divide-y divide-gray-100">
               {pendingRequests.map((request) => (
                 <li
                   key={request.id}
@@ -206,7 +239,7 @@ export function AdminDashboardPage() {
                   </div>
                 </li>
               ))}
-            </ul>
+            </AnimatedList>
           )}
         </CardBody>
       </Card>
@@ -232,7 +265,7 @@ export function AdminDashboardPage() {
               <p className="text-gray-500 text-sm">No overdue chores</p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <AnimatedList className="divide-y divide-gray-100">
               {overdueChores.map((chore) => (
                 <li
                   key={chore.id}
@@ -264,10 +297,11 @@ export function AdminDashboardPage() {
                   </div>
                 </li>
               ))}
-            </ul>
+            </AnimatedList>
           )}
         </CardBody>
       </Card>
     </div>
+    </FadeIn>
   );
 }

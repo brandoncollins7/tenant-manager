@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { ChoreCard } from '../components/chores/ChoreCard';
 import { CompletionModal } from '../components/chores/CompletionModal';
 import { WelcomeModal } from '../components/help/WelcomeModal';
+import { AnimatedList, FadeIn } from '../components/ui/AnimatedList';
 import { Card, CardBody } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
@@ -100,6 +101,7 @@ export function DashboardPage() {
   const totalCount = todaysChores?.chores.length ?? 0;
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Welcome Card */}
       <Card>
@@ -167,14 +169,16 @@ export function DashboardPage() {
             <h3 className="font-semibold text-gray-900">
               Today's Chores{occupantNames && ` - ${occupantNames}`}
             </h3>
-            {todaysChores.chores.map((completion) => (
-              <ChoreCard
-                key={completion.id}
-                completion={completion}
-                occupantName={completion.occupant.name}
-                onComplete={() => setSelectedCompletion(completion)}
-              />
-            ))}
+            <AnimatedList className="space-y-3">
+              {todaysChores.chores.map((completion) => (
+                <ChoreCard
+                  key={completion.id}
+                  completion={completion}
+                  occupantName={completion.occupant.name}
+                  onComplete={() => setSelectedCompletion(completion)}
+                />
+              ))}
+            </AnimatedList>
           </div>
         </div>
       ) : (
@@ -201,5 +205,6 @@ export function DashboardPage() {
       {/* Welcome Modal (first-time onboarding) */}
       <WelcomeModal isOpen={showWelcome} onClose={handleCloseWelcome} />
     </div>
+    </FadeIn>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, User, Calendar, BarChart3, HelpCircle, PlayCircle, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AnimatedList, FadeIn } from '../components/ui/AnimatedList';
 import { Card, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -34,6 +35,7 @@ export function ProfilePage() {
   });
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Profile Card */}
       <Card>
@@ -60,7 +62,7 @@ export function ProfilePage() {
         <Card>
           <CardBody>
             <h3 className="font-semibold text-gray-900 mb-3">Switch Person</h3>
-            <div className="space-y-2">
+            <AnimatedList className="space-y-2">
               {user.occupants.map((occupant) => (
                 <button
                   key={occupant.id}
@@ -87,7 +89,7 @@ export function ProfilePage() {
                   )}
                 </button>
               ))}
-            </div>
+            </AnimatedList>
           </CardBody>
         </Card>
       )}
@@ -197,5 +199,6 @@ export function ProfilePage() {
       {/* Help Modal */}
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
+    </FadeIn>
   );
 }

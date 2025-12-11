@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Mail, Phone, Calendar, Trash2, Pencil, Upload, History, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { AddTenantModal } from '../../components/admin/AddTenantModal';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
@@ -138,13 +140,46 @@ export function AdminTenantsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-lg" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="w-8 h-8 rounded-lg" />
+                </div>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <div className="flex gap-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                  <Skeleton className="h-10 w-full rounded-lg" />
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -159,15 +194,15 @@ export function AdminTenantsPage() {
       </div>
 
       {/* Tenant List */}
-      <div className="space-y-4">
-        {tenants?.length === 0 ? (
-          <Card>
-            <CardBody className="text-center py-8">
-              <p className="text-gray-600">No tenants yet. Add your first tenant to get started.</p>
-            </CardBody>
-          </Card>
-        ) : (
-          tenants?.map((tenant) => (
+      {tenants?.length === 0 ? (
+        <Card>
+          <CardBody className="text-center py-8">
+            <p className="text-gray-600">No tenants yet. Add your first tenant to get started.</p>
+          </CardBody>
+        </Card>
+      ) : (
+        <AnimatedList className="space-y-4">
+          {tenants?.map((tenant) => (
             <Card key={tenant.id}>
               <CardHeader className="flex items-center justify-between">
                 <div>
@@ -317,9 +352,9 @@ export function AdminTenantsPage() {
                 </div>
               </CardBody>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </AnimatedList>
+      )}
 
       <AddTenantModal
         isOpen={isModalOpen}
@@ -456,5 +491,6 @@ export function AdminTenantsPage() {
         </div>
       </Modal>
     </div>
+    </FadeIn>
   );
 }

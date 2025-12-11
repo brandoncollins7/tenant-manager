@@ -4,9 +4,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { swapsApi } from '../api/swaps';
 import { useAuth } from '../context/AuthContext';
 import { trackEvent, EVENTS } from '../utils/analytics';
+import { AnimatedList, FadeIn } from '../components/ui/AnimatedList';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 import { DAYS_OF_WEEK } from '../types';
 
 export function SwapsPage() {
@@ -59,8 +61,29 @@ export function SwapsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-32" />
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardBody>
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 flex-1 rounded-lg" />
+                    <Skeleton className="h-9 flex-1 rounded-lg" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -87,11 +110,13 @@ export function SwapsPage() {
   } as const;
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Pending Requests (incoming) */}
       {pendingRequests && pendingRequests.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-semibold text-gray-900">Requests for You</h2>
+          <AnimatedList className="space-y-3">
           {pendingRequests.map((swap) => (
             <Card key={swap.id} className="border-yellow-200 bg-yellow-50">
               <CardBody>
@@ -143,6 +168,7 @@ export function SwapsPage() {
               </CardBody>
             </Card>
           ))}
+          </AnimatedList>
         </div>
       )}
 
@@ -150,6 +176,7 @@ export function SwapsPage() {
       {myRequests && myRequests.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-semibold text-gray-900">Your Requests</h2>
+          <AnimatedList className="space-y-3">
           {myRequests.map((swap) => {
             const config = statusConfig[swap.status];
             const StatusIcon = config.icon;
@@ -193,6 +220,7 @@ export function SwapsPage() {
               </Card>
             );
           })}
+          </AnimatedList>
         </div>
       )}
 
@@ -200,6 +228,7 @@ export function SwapsPage() {
       {pastSwaps && pastSwaps.length > 0 && (
         <div className="space-y-3">
           <h2 className="font-semibold text-gray-900">Past Requests</h2>
+          <AnimatedList className="space-y-3">
           {pastSwaps.map((swap) => {
             const config = statusConfig[swap.status];
             const StatusIcon = config.icon;
@@ -223,6 +252,7 @@ export function SwapsPage() {
               </Card>
             );
           })}
+          </AnimatedList>
         </div>
       )}
 
@@ -242,5 +272,6 @@ export function SwapsPage() {
         </Card>
       )}
     </div>
+    </FadeIn>
   );
 }

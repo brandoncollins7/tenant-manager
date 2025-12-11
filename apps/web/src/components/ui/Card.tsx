@@ -9,8 +9,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'rounded-xl border border-gray-100 bg-card text-card-foreground shadow-sm overflow-hidden',
-      onClick && 'cursor-pointer active:bg-gray-50',
+      'rounded-xl border border-gray-100 bg-card text-card-foreground shadow-sm overflow-hidden transition-all duration-200',
+      onClick && 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm',
       className
     )}
     onClick={onClick}
