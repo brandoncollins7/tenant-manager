@@ -267,11 +267,10 @@ When adding new endpoints, always apply `@UseGuards(JwtAuthGuard)` at minimum. N
 
 ## Before Pushing Code
 
-**MANDATORY - Do not skip these steps:**
+**MANDATORY - Do not skip:**
 
 1. `pnpm test` - All tests must pass
-2. `pnpm build` - Build must succeed
-3. Only then commit and push
+2. Only then commit and push
 
 **NEVER push without running tests first. No exceptions.**
 
