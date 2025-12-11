@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Mail, CheckCircle } from 'lucide-react';
+import { Mail, CheckCircle, Home } from 'lucide-react';
 import { authApi } from '../api/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -55,7 +55,7 @@ export function LoginPage() {
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-primary-100 rounded-2xl flex items-center justify-center">
-            <span className="text-3xl">🏠</span>
+            <Home className="w-8 h-8 text-primary-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Rentably</h1>
           <p className="text-gray-600 mt-1">Sign in to manage your rental</p>

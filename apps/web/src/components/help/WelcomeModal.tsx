@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle, Camera, ArrowLeftRight } from 'lucide-react';
+import { Calendar, CheckCircle, Camera, ArrowLeftRight, Hand } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { WELCOME_CONTENT } from './helpContent';
@@ -20,7 +20,7 @@ export function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
     <Modal isOpen={isOpen} onClose={onClose} trackingId="welcome-onboarding">
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-3xl">👋</span>
+          <Hand className="w-8 h-8 text-primary-600" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900">{WELCOME_CONTENT.title}</h2>
         <p className="text-gray-600 mt-1">{WELCOME_CONTENT.subtitle}</p>

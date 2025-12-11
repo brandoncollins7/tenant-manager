@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Hand } from 'lucide-react';
 import { choresApi } from '../api/chores';
 import { useAuth } from '../context/AuthContext';
 import { ChoreCard } from '../components/chores/ChoreCard';
 import { CompletionModal } from '../components/chores/CompletionModal';
 import { WelcomeModal } from '../components/help/WelcomeModal';
 import { Card, CardBody } from '../components/ui/Card';
+import { Skeleton } from '../components/ui/Skeleton';
 import { DAYS_OF_WEEK, type ChoreCompletion } from '../types';
 
 const ONBOARDING_KEY = 'rentably_onboarding_completed';
@@ -32,8 +33,57 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        {/* Welcome Card Skeleton */}
+        <Card>
+          <CardBody>
+            <div className="flex items-center gap-4">
+              <Skeleton className="w-12 h-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+        {/* Status Banner Skeleton */}
+        <Card>
+          <CardBody>
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-6 h-6 rounded" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+        {/* Chore Cards Skeleton */}
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-36" />
+          <Card>
+            <CardBody>
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+          <Card>
+            <CardBody>
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -56,7 +106,7 @@ export function DashboardPage() {
         <CardBody>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-              <span className="text-2xl">👋</span>
+              <Hand className="w-6 h-6 text-primary-600" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
