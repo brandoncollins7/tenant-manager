@@ -205,16 +205,31 @@ model ChoreCompletion {
   choreId         String
   status          CompletionStatus @default(PENDING)
   completedAt     DateTime?
-  photoPath       String?
-  photoUploadedAt DateTime?
+  photoPath       String?          // Legacy: kept for backward compatibility
+  photoUploadedAt DateTime?        // Legacy: kept for backward compatibility
   notes           String?
 
-  schedule ChoreSchedule   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  occupant Occupant        @relation(fields: [occupantId], references: [id], onDelete: Cascade)
-  chore    ChoreDefinition @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  schedule ChoreSchedule          @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  occupant Occupant               @relation(fields: [occupantId], references: [id], onDelete: Cascade)
+  chore    ChoreDefinition        @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  photos   ChoreCompletionPhoto[]
 
   @@unique([scheduleId, occupantId, choreId])
   @@map("chore_completions")
+}
+
+model ChoreCompletionPhoto {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now())
+  completionId    String
+  photoPath       String
+  photoUploadedAt DateTime @default(now())
+  sortOrder       Int      @default(0)
+
+  completion ChoreCompletion @relation(fields: [completionId], references: [id], onDelete: Cascade)
+
+  @@index([completionId])
+  @@map("chore_completion_photos")
 }
 
 // ============================================

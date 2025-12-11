@@ -154,6 +154,52 @@ export class ChoresService {
       throw new NotFoundException('Chore completion record not found');
     }
 
+    // Handle multiple photos (new behavior)
+    if (dto.photoPaths && dto.photoPaths.length > 0) {
+      if (dto.photoPaths.length > 3) {
+        throw new BadRequestException('Maximum 3 photos allowed');
+      }
+
+      return this.prisma.$transaction(async (tx) => {
+        // Update completion status
+        await tx.choreCompletion.update({
+          where: { id: completionId },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+            ...(dto.notes && { notes: dto.notes }),
+          },
+        });
+
+        // Create photo records
+        await Promise.all(
+          dto.photoPaths!.map((photoPath, index) =>
+            tx.choreCompletionPhoto.create({
+              data: {
+                completionId,
+                photoPath,
+                sortOrder: index,
+              },
+            }),
+          ),
+        );
+
+        // Fetch updated completion with photos
+        const result = await tx.choreCompletion.findUnique({
+          where: { id: completionId },
+          include: {
+            occupant: true,
+            chore: true,
+            photos: { orderBy: { sortOrder: 'asc' } },
+          },
+        });
+
+        // This should never be null since we just updated it
+        return result!;
+      });
+    }
+
+    // Handle single photo (legacy/backward compatibility)
     return this.prisma.choreCompletion.update({
       where: { id: completionId },
       data: {
@@ -168,6 +214,7 @@ export class ChoresService {
       include: {
         occupant: true,
         chore: true,
+        photos: { orderBy: { sortOrder: 'asc' } },
       },
     });
   }

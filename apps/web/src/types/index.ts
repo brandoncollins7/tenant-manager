@@ -75,11 +75,19 @@ export interface ChoreDefinition {
   sortOrder: number;
 }
 
+export interface ChoreCompletionPhoto {
+  id: string;
+  photoPath: string;
+  photoUploadedAt: string;
+  sortOrder: number;
+}
+
 export interface ChoreCompletion {
   id: string;
   status: 'PENDING' | 'COMPLETED' | 'MISSED' | 'EXCUSED';
   completedAt?: string;
-  photoPath?: string;
+  photoPath?: string; // Legacy: kept for backward compatibility
+  photos?: ChoreCompletionPhoto[];
   notes?: string;
   chore: ChoreDefinition;
   occupant: Occupant;

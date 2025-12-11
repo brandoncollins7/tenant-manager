@@ -322,6 +322,7 @@ describe('ChoresService', () => {
         include: {
           occupant: true,
           chore: true,
+          photos: { orderBy: { sortOrder: 'asc' } },
         },
       });
     });
@@ -374,6 +375,7 @@ describe('ChoresService', () => {
         include: {
           occupant: true,
           chore: true,
+          photos: { orderBy: { sortOrder: 'asc' } },
         },
       });
     });
@@ -422,8 +424,90 @@ describe('ChoresService', () => {
         include: {
           occupant: true,
           chore: true,
+          photos: { orderBy: { sortOrder: 'asc' } },
         },
       });
+    });
+
+    it('should mark a chore as complete with multiple photos', async () => {
+      const mockCompletion = {
+        id: 'completion-1',
+        scheduleId: 'schedule-1',
+        choreId: 'chore-1',
+        occupantId: 'occupant-1',
+        status: 'PENDING',
+        completedAt: null,
+        photoPath: null,
+        photoUploadedAt: null,
+        notes: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const updatedCompletion = {
+        ...mockCompletion,
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        occupant: { id: 'occupant-1', name: 'John' },
+        chore: { id: 'chore-1', name: 'Kitchen' },
+        photos: [
+          { id: 'photo-1', photoPath: 'tenant-1/photo1.jpg', sortOrder: 0 },
+          { id: 'photo-2', photoPath: 'tenant-1/photo2.jpg', sortOrder: 1 },
+        ],
+      };
+
+      prisma.choreCompletion.findUnique.mockResolvedValue(mockCompletion as any);
+
+      // Mock transaction
+      const mockTx = {
+        choreCompletion: {
+          update: jest.fn().mockResolvedValue(updatedCompletion),
+          findUnique: jest.fn().mockResolvedValue(updatedCompletion),
+        },
+        choreCompletionPhoto: {
+          create: jest.fn().mockResolvedValue({}),
+        },
+      };
+      prisma.$transaction.mockImplementation(async (callback: any) => {
+        return callback(mockTx);
+      });
+
+      const result = await service.markComplete('completion-1', {
+        photoPaths: ['tenant-1/photo1.jpg', 'tenant-1/photo2.jpg'],
+      });
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.photos).toHaveLength(2);
+      expect(mockTx.choreCompletionPhoto.create).toHaveBeenCalledTimes(2);
+      expect(mockTx.choreCompletionPhoto.create).toHaveBeenCalledWith({
+        data: {
+          completionId: 'completion-1',
+          photoPath: 'tenant-1/photo1.jpg',
+          sortOrder: 0,
+        },
+      });
+      expect(mockTx.choreCompletionPhoto.create).toHaveBeenCalledWith({
+        data: {
+          completionId: 'completion-1',
+          photoPath: 'tenant-1/photo2.jpg',
+          sortOrder: 1,
+        },
+      });
+    });
+
+    it('should reject more than 3 photos', async () => {
+      const mockCompletion = {
+        id: 'completion-1',
+        status: 'PENDING',
+      };
+
+      prisma.choreCompletion.findUnique.mockResolvedValue(mockCompletion as any);
+
+      await expect(
+        service.markComplete('completion-1', {
+          photoPaths: ['photo1.jpg', 'photo2.jpg', 'photo3.jpg', 'photo4.jpg'],
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

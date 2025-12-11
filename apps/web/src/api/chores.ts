@@ -34,11 +34,11 @@ export const choresApi = {
 
   markComplete: async (
     completionId: string,
-    photoPath?: string,
+    photoPaths?: string[],
     notes?: string
   ): Promise<ChoreCompletion> => {
     const response = await apiClient.post(`/chores/${completionId}/complete`, {
-      photoPath,
+      photoPaths,
       notes,
     });
     return response.data;

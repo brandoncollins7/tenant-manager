@@ -9,6 +9,15 @@ import { trackEvent, EVENTS } from '../../utils/analytics';
 import { invalidateChoreQueries } from '../../utils/queryKeys';
 import type { ChoreCompletion } from '../../types';
 
+const MAX_PHOTOS = 3;
+
+interface PhotoState {
+  file: File;
+  preview: string;
+  uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'error';
+  uploadedPath?: string;
+}
+
 interface CompletionModalProps {
   completion: ChoreCompletion | null;
   onClose: () => void;
@@ -16,9 +25,9 @@ interface CompletionModalProps {
 
 export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   const [showCamera, setShowCamera] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<PhotoState[]>([]);
   const [notes, setNotes] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const queryClient = useQueryClient();
 
   const uploadMutation = useMutation({
@@ -28,13 +37,13 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   const completeMutation = useMutation({
     mutationFn: ({
       completionId,
-      photoPath,
+      photoPaths,
       notes,
     }: {
       completionId: string;
-      photoPath?: string;
+      photoPaths?: string[];
       notes?: string;
-    }) => choresApi.markComplete(completionId, photoPath, notes),
+    }) => choresApi.markComplete(completionId, photoPaths, notes),
     onSuccess: () => {
       // Track successful completion
       if (completion) {
@@ -42,7 +51,7 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
           choreId: completion.chore.id,
           choreName: completion.chore.name,
           hasNotes: !!notes,
-          hasPhoto: !!photoFile,
+          photoCount: photos.length,
         });
       }
 
@@ -53,61 +62,104 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
   });
 
   const handlePhotoCapture = (file: File) => {
-    // Track that user started completion
-    if (completion) {
+    // Track that user started completion (on first photo)
+    if (photos.length === 0 && completion) {
       trackEvent(EVENTS.CHORE_COMPLETION_STARTED, {
         choreId: completion.chore.id,
         choreName: completion.chore.name,
       });
     }
 
-    setPhotoFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPhotoPreview(reader.result as string);
+      setPhotos((prev) => [
+        ...prev,
+        {
+          file,
+          preview: reader.result as string,
+          uploadStatus: 'pending',
+        },
+      ]);
     };
     reader.readAsDataURL(file);
     setShowCamera(false);
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
     if (!completion) return;
 
     try {
-      let photoPath: string | undefined;
+      setIsUploading(true);
 
-      if (photoFile) {
-        const uploadResult = await uploadMutation.mutateAsync(photoFile);
-        photoPath = uploadResult.filename;
+      // Upload all pending photos
+      const uploadedPaths: string[] = [];
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        if (photo.uploadStatus === 'pending') {
+          // Update status to uploading
+          setPhotos((prev) =>
+            prev.map((p, idx) =>
+              idx === i ? { ...p, uploadStatus: 'uploading' as const } : p
+            )
+          );
+
+          try {
+            const result = await uploadMutation.mutateAsync(photo.file);
+            uploadedPaths.push(result.filename);
+            // Update status to uploaded
+            setPhotos((prev) =>
+              prev.map((p, idx) =>
+                idx === i
+                  ? { ...p, uploadStatus: 'uploaded' as const, uploadedPath: result.filename }
+                  : p
+              )
+            );
+          } catch {
+            // Update status to error
+            setPhotos((prev) =>
+              prev.map((p, idx) =>
+                idx === i ? { ...p, uploadStatus: 'error' as const } : p
+              )
+            );
+            throw new Error('Failed to upload photo');
+          }
+        } else if (photo.uploadedPath) {
+          uploadedPaths.push(photo.uploadedPath);
+        }
       }
 
       await completeMutation.mutateAsync({
         completionId: completion.id,
-        photoPath,
+        photoPaths: uploadedPaths.length > 0 ? uploadedPaths : undefined,
         notes: notes || undefined,
       });
     } catch (error) {
       console.error('Failed to complete chore:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleClose = () => {
     // Track cancellation if user had started but didn't submit
-    if (photoFile && completion && !completeMutation.isSuccess) {
+    if (photos.length > 0 && completion && !completeMutation.isSuccess) {
       trackEvent(EVENTS.CHORE_COMPLETION_CANCELLED, {
         choreId: completion.chore.id,
         choreName: completion.chore.name,
       });
     }
 
-    setPhotoFile(null);
-    setPhotoPreview(null);
+    setPhotos([]);
     setNotes('');
     setShowCamera(false);
     onClose();
   };
 
-  const isLoading = uploadMutation.isPending || completeMutation.isPending;
+  const isLoading = isUploading || completeMutation.isPending;
 
   if (showCamera) {
     return (
@@ -128,31 +180,68 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
         {/* Photo Section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Photo Proof (optional)
+            Photo Proof (optional, up to {MAX_PHOTOS})
           </label>
-          {photoPreview ? (
-            <div className="relative">
-              <img
-                src={photoPreview}
-                alt="Preview"
-                className="w-full h-48 object-cover rounded-lg"
-              />
+
+          {/* Photo Grid */}
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {photos.map((photo, index) => (
+              <div key={index} className="relative aspect-square">
+                <img
+                  src={photo.preview}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-full object-cover rounded-lg"
+                />
+
+                {/* Upload status indicator */}
+                {photo.uploadStatus === 'uploading' && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+
+                {photo.uploadStatus === 'uploaded' && (
+                  <div className="absolute top-1 left-1 w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
+                    ✓
+                  </div>
+                )}
+
+                {photo.uploadStatus === 'error' && (
+                  <div className="absolute inset-0 bg-red-500/70 flex items-center justify-center rounded-lg">
+                    <span className="text-white text-xs font-medium">Failed</span>
+                  </div>
+                )}
+
+                {/* Remove button */}
+                {!isLoading && (
+                  <button
+                    onClick={() => handleRemovePhoto(index)}
+                    className="absolute top-1 right-1 w-6 h-6 bg-black/70 text-white rounded-full flex items-center justify-center text-sm hover:bg-black/90"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {/* Add photo button */}
+            {photos.length < MAX_PHOTOS && (
               <button
                 onClick={() => setShowCamera(true)}
-                className="absolute bottom-2 right-2 px-3 py-1 bg-black/70 text-white text-sm rounded-full"
+                disabled={isLoading}
+                className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:border-primary-500 hover:text-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Retake
+                <span className="text-2xl">📸</span>
+                <span className="text-xs mt-1">
+                  {photos.length === 0 ? 'Add Photo' : 'Add More'}
+                </span>
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowCamera(true)}
-              className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-500 hover:border-primary-500 hover:text-primary-500 transition-colors"
-            >
-              <span className="text-4xl mb-2">📸</span>
-              <span>Tap to take photo</span>
-            </button>
-          )}
+            )}
+          </div>
+
+          <p className="text-xs text-gray-500">
+            {photos.length}/{MAX_PHOTOS} photos added
+          </p>
         </div>
 
         {/* Notes Section */}
@@ -166,12 +255,13 @@ export function CompletionModal({ completion, onClose }: CompletionModalProps) {
             placeholder="Any additional notes..."
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             rows={3}
+            disabled={isLoading}
           />
         </div>
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" className="flex-1" onClick={handleClose}>
+          <Button variant="secondary" className="flex-1" onClick={handleClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button
