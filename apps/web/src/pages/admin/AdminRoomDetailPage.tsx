@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, Trash2, UserPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { PhoneInput } from '../../components/ui/PhoneInput';
 import { Modal } from '../../components/ui/Modal';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
@@ -385,8 +387,18 @@ export function AdminRoomDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-10 h-10 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-lg" />
       </div>
     );
   }
@@ -405,6 +417,7 @@ export function AdminRoomDetailPage() {
   const hasChanges = roomNumber !== room.roomNumber;
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -881,5 +894,6 @@ export function AdminRoomDetailPage() {
         />
       )}
     </div>
+    </FadeIn>
   );
 }

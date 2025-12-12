@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, Building, DoorOpen, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { apiClient } from '../../api/client';
 import { extractErrorMessage } from '../../utils/errors';
 
@@ -172,13 +174,48 @@ export function AdminRoomsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-lg" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-24 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((j) => (
+                    <Skeleton key={j} className="h-16 rounded-lg" />
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -193,16 +230,16 @@ export function AdminRoomsPage() {
       </div>
 
       {/* Units List */}
-      <div className="space-y-4">
-        {units?.length === 0 ? (
+      {units?.length === 0 ? (
           <Card>
             <CardBody className="text-center py-8">
               <Building className="w-12 h-12 mx-auto mb-3 text-gray-400" />
               <p className="text-gray-600">No units yet. Add your first unit to get started.</p>
             </CardBody>
           </Card>
-        ) : (
-          units?.map((unit) => (
+      ) : (
+        <AnimatedList className="space-y-4">
+          {units?.map((unit) => (
             <Card key={unit.id}>
               <CardHeader className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -283,9 +320,9 @@ export function AdminRoomsPage() {
                 )}
               </CardBody>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </AnimatedList>
+      )}
 
       {/* Add/Edit Unit Modal */}
       <Modal
@@ -450,5 +487,6 @@ export function AdminRoomsPage() {
         </div>
       </Modal>
     </div>
+    </FadeIn>
   );
 }

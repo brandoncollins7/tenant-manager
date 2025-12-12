@@ -4,9 +4,11 @@ import { MessageSquare, Camera, Clock, CheckCircle, Eye, XCircle } from 'lucide-
 import { formatDistanceToNow } from 'date-fns';
 import { requestsApi } from '../api/requests';
 import { useAuth } from '../context/AuthContext';
+import { AnimatedList, FadeIn } from '../components/ui/AnimatedList';
 import { Card, CardBody } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Skeleton } from '../components/ui/Skeleton';
 import { CreateRequestModal } from '../components/requests/CreateRequestModal';
 import { RequestDetailModal } from '../components/requests/RequestDetailModal';
 import { ConcernDetailModal } from '../components/concerns/ConcernDetailModal';
@@ -83,8 +85,35 @@ export function RequestsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-28" />
+          <Skeleton className="h-10 w-32 rounded-lg" />
+        </div>
+        <div className="flex gap-2 border-b border-gray-200 pb-2">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-16" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardBody>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -215,6 +244,7 @@ export function RequestsPage() {
   } : null;
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -261,7 +291,7 @@ export function RequestsPage() {
 
       {/* Request List */}
       {filteredItems.length > 0 ? (
-        <div className="space-y-3">
+        <AnimatedList className="space-y-3">
           {filteredItems.map((item) => (
             <Card
               key={`${item.category}-${item.id}`}
@@ -326,7 +356,7 @@ export function RequestsPage() {
               </CardBody>
             </Card>
           ))}
-        </div>
+        </AnimatedList>
       ) : (
         <Card>
           <CardBody className="text-center py-12">
@@ -363,5 +393,6 @@ export function RequestsPage() {
         onClose={() => setSelectedItem(null)}
       />
     </div>
+    </FadeIn>
   );
 }

@@ -12,11 +12,13 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { PhoneInput } from '../../components/ui/PhoneInput';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { TenantInfoCard } from '../../components/admin/TenantInfoCard';
 import { LeaseHistoryModal } from '../../components/admin/LeaseHistoryModal';
 import { UploadLeaseModal } from '../../components/admin/UploadLeaseModal';
@@ -436,8 +438,20 @@ export function AdminUnitDetailPage() {
 
   if (unitLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-10 h-10 rounded-lg" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+        </div>
+        <Skeleton className="h-10 w-64 rounded-lg" />
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -454,6 +468,7 @@ export function AdminUnitDetailPage() {
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
@@ -521,8 +536,10 @@ export function AdminUnitDetailPage() {
 
           {/* Tenants List */}
           {tenantsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-40 w-full rounded-lg" />
+              ))}
             </div>
           ) : tenants?.length === 0 ? (
             <Card>
@@ -532,68 +549,70 @@ export function AdminUnitDetailPage() {
               </CardBody>
             </Card>
           ) : (
-            tenants?.map((tenant) => (
-              <TenantInfoCard
-                key={tenant.id}
-                tenant={{
-                  id: tenant.id,
-                  email: tenant.email,
-                  phone: tenant.phone,
-                  startDate: tenant.startDate,
-                  isActive: tenant.isActive,
-                  leaseDocument: tenant.leaseDocument,
-                }}
-                occupants={tenant.occupants || []}
-                roomNumber={tenant.room?.roomNumber}
-                isSuperAdmin={isSuperAdmin}
-                isPendingImpersonate={impersonateMutation.isPending}
-                isPendingResendEmail={sendLoginLinkMutation.isPending}
-                onImpersonate={() => impersonateMutation.mutate(tenant.id)}
-                onResendLoginEmail={() => sendLoginLinkMutation.mutate(tenant.id)}
-                onDeleteTenant={() => setTenantToDelete(tenant)}
-                onEditTenant={() => {
-                  setEditTenantModal({
-                    tenantId: tenant.id,
-                    currentData: {
-                      email: tenant.email,
-                      phone: tenant.phone,
-                      startDate: tenant.startDate,
-                    },
-                  });
-                  setEditTenantForm({
+            <AnimatedList className="space-y-4">
+              {tenants?.map((tenant) => (
+                <TenantInfoCard
+                  key={tenant.id}
+                  tenant={{
+                    id: tenant.id,
                     email: tenant.email,
-                    phone: tenant.phone || '',
-                    startDate: tenant.startDate ? new Date(tenant.startDate).toISOString().split('T')[0] : '',
-                  });
-                }}
-                onUploadLease={() =>
-                  setUploadLeaseModal({
-                    isOpen: true,
-                    tenantId: tenant.id,
-                    tenantName: tenant.email,
-                  })
-                }
-                onViewLeaseHistory={() =>
-                  setHistoryModal({
-                    isOpen: true,
-                    tenantId: tenant.id,
-                    tenantName: tenant.email,
-                  })
-                }
-                onViewCurrentLease={async () => {
-                  try {
-                    const blob = await tenantsApi.getCurrentLeaseBlob(tenant.id);
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                  } catch (error) {
-                    toast.error(extractErrorMessage(error));
+                    phone: tenant.phone,
+                    startDate: tenant.startDate,
+                    isActive: tenant.isActive,
+                    leaseDocument: tenant.leaseDocument,
+                  }}
+                  occupants={tenant.occupants || []}
+                  roomNumber={tenant.room?.roomNumber}
+                  isSuperAdmin={isSuperAdmin}
+                  isPendingImpersonate={impersonateMutation.isPending}
+                  isPendingResendEmail={sendLoginLinkMutation.isPending}
+                  onImpersonate={() => impersonateMutation.mutate(tenant.id)}
+                  onResendLoginEmail={() => sendLoginLinkMutation.mutate(tenant.id)}
+                  onDeleteTenant={() => setTenantToDelete(tenant)}
+                  onEditTenant={() => {
+                    setEditTenantModal({
+                      tenantId: tenant.id,
+                      currentData: {
+                        email: tenant.email,
+                        phone: tenant.phone,
+                        startDate: tenant.startDate,
+                      },
+                    });
+                    setEditTenantForm({
+                      email: tenant.email,
+                      phone: tenant.phone || '',
+                      startDate: tenant.startDate ? new Date(tenant.startDate).toISOString().split('T')[0] : '',
+                    });
+                  }}
+                  onUploadLease={() =>
+                    setUploadLeaseModal({
+                      isOpen: true,
+                      tenantId: tenant.id,
+                      tenantName: tenant.email,
+                    })
                   }
-                }}
-                onAddOccupant={() => setAddOccupantModal({ tenantId: tenant.id })}
-                onEditOccupant={(occupant) => handleEditOccupant(occupant)}
-                onDeleteOccupant={(occupant) => setOccupantToDelete(occupant)}
-              />
-            ))
+                  onViewLeaseHistory={() =>
+                    setHistoryModal({
+                      isOpen: true,
+                      tenantId: tenant.id,
+                      tenantName: tenant.email,
+                    })
+                  }
+                  onViewCurrentLease={async () => {
+                    try {
+                      const blob = await tenantsApi.getCurrentLeaseBlob(tenant.id);
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank');
+                    } catch (error) {
+                      toast.error(extractErrorMessage(error));
+                    }
+                  }}
+                  onAddOccupant={() => setAddOccupantModal({ tenantId: tenant.id })}
+                  onEditOccupant={(occupant) => handleEditOccupant(occupant)}
+                  onDeleteOccupant={(occupant) => setOccupantToDelete(occupant)}
+                />
+              ))}
+            </AnimatedList>
           )}
         </div>
       )}
@@ -672,8 +691,10 @@ export function AdminUnitDetailPage() {
 
           {/* Managers List */}
           {managersLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              ))}
             </div>
           ) : managers?.length === 0 ? (
             <Card>
@@ -686,7 +707,7 @@ export function AdminUnitDetailPage() {
               </CardBody>
             </Card>
           ) : (
-            <div className="grid gap-3">
+            <AnimatedList className="grid gap-3">
               {managers?.map((manager) => (
                 <Card key={manager.id}>
                   <CardBody className="p-4">
@@ -711,7 +732,7 @@ export function AdminUnitDetailPage() {
                   </CardBody>
                 </Card>
               ))}
-            </div>
+            </AnimatedList>
           )}
         </div>
       )}
@@ -1238,5 +1259,6 @@ export function AdminUnitDetailPage() {
         </div>
       </Modal>
     </div>
+    </FadeIn>
   );
 }

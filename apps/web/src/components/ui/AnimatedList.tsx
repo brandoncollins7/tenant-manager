@@ -10,21 +10,27 @@ export function AnimatedList({ children, className }: AnimatedListProps) {
   return (
     <AnimatePresence mode="popLayout">
       <div className={className}>
-        {React.Children.map(children, (child, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{
-              duration: 0.2,
-              delay: index * 0.05,
-              ease: 'easeOut'
-            }}
-          >
-            {child}
-          </motion.div>
-        ))}
+        {React.Children.map(children, (child, index) => {
+          // Try to extract key from child, fallback to index
+          const key = React.isValidElement(child) && child.key != null
+            ? child.key
+            : index;
+          return (
+            <motion.div
+              key={key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{
+                duration: 0.2,
+                delay: index * 0.05,
+                ease: 'easeOut'
+              }}
+            >
+              {child}
+            </motion.div>
+          );
+        })}
       </div>
     </AnimatePresence>
   );

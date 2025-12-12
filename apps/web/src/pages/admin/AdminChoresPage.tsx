@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { apiClient } from '../../api/client';
 import { extractErrorMessage } from '../../utils/errors';
 
@@ -134,13 +136,40 @@ export function AdminChoresPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-5 w-56" />
+          </div>
+          <Skeleton className="h-10 w-28 rounded-lg" />
+        </div>
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-20" />
+          </CardHeader>
+          <CardBody className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between p-2">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-4">
@@ -185,7 +214,7 @@ export function AdminChoresPage() {
               No chores defined. Add your first chore to get started.
             </p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <AnimatedList className="divide-y divide-gray-100">
               {chores.map((chore) => (
                 <li
                   key={chore.id}
@@ -215,7 +244,7 @@ export function AdminChoresPage() {
                   </div>
                 </li>
               ))}
-            </ul>
+            </AnimatedList>
           )}
         </CardBody>
       </Card>
@@ -308,5 +337,6 @@ export function AdminChoresPage() {
         </div>
       </Modal>
     </div>
+    </FadeIn>
   );
 }

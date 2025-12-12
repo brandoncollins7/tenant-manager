@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Bell, Check } from 'lucide-react';
 import { notificationsApi } from '../../api/notifications';
 import { formatDistanceToNow } from 'date-fns';
+import { AnimatedList } from '../ui/AnimatedList';
+import { Skeleton } from '../ui/Skeleton';
 
 interface NotificationPanelProps {
   isOpen: boolean;
@@ -65,8 +67,14 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
         {/* Content */}
         <div className="overflow-y-auto h-[calc(100vh-60px)]">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full" />
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
             </div>
           ) : notifications?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -74,7 +82,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
               <p>No notifications yet</p>
             </div>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <AnimatedList className="divide-y divide-gray-100">
               {notifications?.map((notification) => (
                 <li
                   key={notification.id}
@@ -107,7 +115,7 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
                   </div>
                 </li>
               ))}
-            </ul>
+            </AnimatedList>
           )}
         </div>
       </div>

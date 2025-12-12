@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { AnimatedList, FadeIn } from '../../components/ui/AnimatedList';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { apiClient } from '../../api/client';
 import { DAYS_OF_WEEK } from '../../types';
 
@@ -56,13 +58,37 @@ export function AdminSchedulePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-28" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-10 w-64 rounded-lg" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-5 w-24" />
+              </CardHeader>
+              <CardBody className="space-y-3">
+                {[1, 2].map((j) => (
+                  <div key={j} className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
+    <FadeIn>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -91,7 +117,7 @@ export function AdminSchedulePage() {
       </div>
 
       {/* Schedule by Day */}
-      <div className="space-y-4">
+      <AnimatedList className="space-y-4">
         {scheduleByDay?.map((daySchedule) => {
           const dayName = DAYS_OF_WEEK[daySchedule.day];
 
@@ -140,7 +166,8 @@ export function AdminSchedulePage() {
             </Card>
           );
         })}
-      </div>
+      </AnimatedList>
     </div>
+    </FadeIn>
   );
 }
